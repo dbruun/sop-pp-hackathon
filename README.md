@@ -4,7 +4,7 @@ RAG Agent System for Standard Operating Procedures and Policy Management
 
 ## Overview
 
-This repository contains a .NET Blazor web application that implements a dual-agent RAG (Retrieval-Augmented Generation) system using Microsoft Semantic Kernel and Azure AI Foundry. The application features two specialized AI agents that simultaneously answer user queries:
+This repository contains a .NET Blazor web application that implements a dual-agent RAG (Retrieval-Augmented Generation) system using Azure AI Agent Service and Azure AI Foundry. The application features two specialized AI agents that simultaneously answer user queries:
 
 - **SOP Agent**: Expert in Standard Operating Procedures, work instructions, and process documentation
 - **Policy Agent**: Expert in company policies, regulations, and compliance requirements
@@ -63,7 +63,8 @@ See the [RagAgentApp/README.md](RagAgentApp/README.md) for detailed setup and us
 
 - **.NET 9.0**: Latest .NET framework
 - **Blazor Server**: Interactive web UI
-- **Microsoft Semantic Kernel**: Agentic AI framework
+- **Azure AI Agent Service**: Agentic AI framework
+- **Azure AI Foundry**: Agent lifecycle management
 - **Azure OpenAI**: LLM capabilities
 - **Docker**: Containerization
 - **Azure Container Apps**: Cloud deployment platform
@@ -72,7 +73,7 @@ See the [RagAgentApp/README.md](RagAgentApp/README.md) for detailed setup and us
 
 1. **Prerequisites**:
    - .NET 9.0 SDK
-   - Azure OpenAI account with deployed model
+   - Azure AI Foundry project with deployed model
    - Docker (optional, for containerization)
 
 2. **Configuration**:

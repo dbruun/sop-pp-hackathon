@@ -37,17 +37,20 @@
 │         └────────────┬─────────────┘                  │     │
 │                      ▼                                │     │
 │         ┌────────────────────────┐                   │     │
-│         │  Semantic Kernel       │◄──────────────────┘     │
-│         │  - Chat Completion     │                         │
-│         │  - Prompt Management   │                         │
+│         │  Azure.AI.Projects     │◄──────────────────┘     │
+│         │  AgentsClient          │                         │
+│         │  - Agent Management    │                         │
+│         │  - Thread Management   │                         │
+│         │  - Run Orchestration   │                         │
 │         └────────────┬───────────┘                         │
 └──────────────────────┼─────────────────────────────────────┘
                        │
                        ▼
           ┌────────────────────────┐
-          │   Azure OpenAI API     │
-          │   - GPT-4 / GPT-3.5    │
-          │   - Chat Completions   │
+          │  Azure AI Foundry      │
+          │  - Agent Service       │
+          │  - Azure OpenAI        │
+          │  - GPT-4 / GPT-3.5     │
           └────────────────────────┘
 ```
 
@@ -108,25 +111,42 @@ public interface IAgentService
 - **Specialty**: Standard Operating Procedures
 - **System Prompt**: Focused on SOPs, work instructions, processes
 - **Response Style**: Clear, structured, procedural
+- **Agent Management**: 
+  - Checks for existing "SOP Expert Agent" in Azure AI Foundry
+  - Reuses existing agent or creates new one
+  - Manages conversation threads per query
 
 #### PolicyRagAgent
 - **Specialty**: Policies and Compliance
 - **System Prompt**: Focused on policies, regulations, governance
 - **Response Style**: Authoritative, citation-ready
+- **Agent Management**: 
+  - Checks for existing "Policy Expert Agent" in Azure AI Foundry
+  - Reuses existing agent or creates new one
+  - Manages conversation threads per query
 
 ### Infrastructure Layer
 
-#### Semantic Kernel
-- **Purpose**: AI orchestration framework
+#### Azure.AI.Projects SDK
+- **Purpose**: Azure AI Agent Service client
+- **Key Component**: `AgentsClient`
 - **Services**:
-  - `IChatCompletionService`: Chat with LLMs
-  - `Kernel`: Dependency injection container
-- **Configuration**: Injected with Azure OpenAI settings
-
-#### Azure OpenAI
-- **Models Supported**: GPT-4, GPT-3.5-Turbo, GPT-4o
-- **API**: Chat Completions endpoint
+  - Agent creation and management
+  - Thread-based conversations
+  - Run orchestration and polling
+  - Message management
+- **Configuration**: Connection string or endpoint + API key
 - **Authentication**: API key or Managed Identity
+
+#### Azure AI Foundry
+- **Agent Service**: Manages agent lifecycle in the cloud
+- **Models Supported**: GPT-4, GPT-3.5-Turbo, GPT-4o
+- **Features**:
+  - Persistent agent storage
+  - Thread-based conversations
+  - Built-in RAG capabilities
+  - Function calling support
+- **Authentication**: Connection string, API key, or Managed Identity
 
 ## Data Flow
 
@@ -142,16 +162,18 @@ public interface IAgentService
 4. OrchestratorService sends query to all IAgentService implementations in parallel
    ↓
 5a. SopRagAgent.ProcessQueryAsync()        5b. PolicyRagAgent.ProcessQueryAsync()
-    - Creates ChatHistory                      - Creates ChatHistory
-    - Adds system prompt                       - Adds system prompt
-    - Adds user message                        - Adds user message
-    - Calls Semantic Kernel                    - Calls Semantic Kernel
+    - Gets or creates agent                    - Gets or creates agent
+      (checks Azure AI Foundry first)            (checks Azure AI Foundry first)
+    - Creates conversation thread              - Creates conversation thread
+    - Adds user message to thread              - Adds user message to thread
+    - Creates run with agent                   - Creates run with agent
+    - Polls for run completion                 - Polls for run completion
     ↓                                          ↓
-6. Semantic Kernel forwards to Azure OpenAI
+6. Azure AI Agent Service processes requests in Azure AI Foundry
    ↓
-7. Azure OpenAI generates responses
+7. Azure OpenAI (via Agent Service) generates responses
    ↓
-8. Responses return to agents
+8. Agents poll and retrieve completed responses from threads
    ↓
 9. OrchestratorService aggregates responses
    ↓
@@ -377,12 +399,14 @@ Operations Team
 - No separate API layer needed
 - Excellent tooling
 
-### Why Semantic Kernel?
-- Official Microsoft AI framework
-- Abstraction over multiple AI services
-- Plugin architecture
-- Memory management
-- Active development
+### Why Azure AI Agent Service?
+- Official Microsoft agentic framework
+- Native Azure AI Foundry integration
+- Persistent agent lifecycle management
+- Thread-based conversation management
+- Built-in RAG and tool support
+- Agent reuse across application restarts
+- Scalable cloud-based execution
 
 ### Why Container Apps?
 - Serverless containers

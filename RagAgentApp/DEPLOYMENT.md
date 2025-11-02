@@ -30,9 +30,13 @@ ACR_NAME="acrragagent$(openssl rand -hex 3)"  # Must be globally unique
 CONTAINERAPPS_ENV="env-ragagent"
 APP_NAME="ragagentapp"
 
-# Azure OpenAI configuration
-AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
-AZURE_OPENAI_KEY="your-api-key-here"
+# Azure AI Foundry configuration (Option 1: Connection String - Recommended)
+AZURE_AI_CONNECTION_STRING="your-connection-string-here"
+MODEL_DEPLOYMENT="gpt-4"  # or gpt-35-turbo, gpt-4o, etc.
+
+# OR (Option 2: Endpoint + Key)
+AZURE_AI_ENDPOINT="https://your-project.cognitiveservices.azure.com/"
+AZURE_AI_KEY="your-api-key-here"
 MODEL_DEPLOYMENT="gpt-4"  # or gpt-35-turbo, gpt-4o, etc.
 ```
 
@@ -111,6 +115,8 @@ ACR_PASSWORD=$(az acr credential show \
 
 ### 8. Deploy Container App
 
+**Option 1: Using Connection String (Recommended)**
+
 ```bash
 az containerapp create \
   --name $APP_NAME \
@@ -123,10 +129,35 @@ az containerapp create \
   --target-port 8080 \
   --ingress external \
   --secrets \
-    azure-ai-api-key="$AZURE_OPENAI_KEY" \
+    azure-ai-connection-string="$AZURE_AI_CONNECTION_STRING" \
   --env-vars \
     ASPNETCORE_ENVIRONMENT=Production \
-    AZURE_AI_PROJECT_ENDPOINT="$AZURE_OPENAI_ENDPOINT" \
+    AZURE_AI_CONNECTION_STRING=secretref:azure-ai-connection-string \
+    AZURE_AI_MODEL_DEPLOYMENT_NAME="$MODEL_DEPLOYMENT" \
+  --cpu 1.0 \
+  --memory 2.0Gi \
+  --min-replicas 1 \
+  --max-replicas 3
+```
+
+**Option 2: Using Endpoint + Key**
+
+```bash
+az containerapp create \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --environment $CONTAINERAPPS_ENV \
+  --image $ACR_NAME.azurecr.io/ragagentapp:latest \
+  --registry-server $ACR_NAME.azurecr.io \
+  --registry-username $ACR_USERNAME \
+  --registry-password $ACR_PASSWORD \
+  --target-port 8080 \
+  --ingress external \
+  --secrets \
+    azure-ai-api-key="$AZURE_AI_KEY" \
+  --env-vars \
+    ASPNETCORE_ENVIRONMENT=Production \
+    AZURE_AI_PROJECT_ENDPOINT="$AZURE_AI_ENDPOINT" \
     AZURE_AI_API_KEY=secretref:azure-ai-api-key \
     AZURE_AI_MODEL_DEPLOYMENT_NAME="$MODEL_DEPLOYMENT" \
   --cpu 1.0 \
@@ -294,16 +325,16 @@ PRINCIPAL_ID=$(az containerapp identity show \
   --output tsv)
 ```
 
-### 3. Grant Access to Azure OpenAI
+### 3. Grant Access to Azure AI Foundry
 
 ```bash
-# Get your Azure OpenAI resource ID
-OPENAI_RESOURCE_ID="/subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_OPENAI_RG/providers/Microsoft.CognitiveServices/accounts/YOUR_OPENAI_ACCOUNT"
+# Get your Azure AI Foundry project resource ID
+AI_PROJECT_RESOURCE_ID="/subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_AI_RG/providers/Microsoft.MachineLearningServices/workspaces/YOUR_AI_PROJECT"
 
 az role assignment create \
   --assignee $PRINCIPAL_ID \
-  --role "Cognitive Services OpenAI User" \
-  --scope $OPENAI_RESOURCE_ID
+  --role "Azure AI Developer" \
+  --scope $AI_PROJECT_RESOURCE_ID
 ```
 
 ### 4. Update Container App to Use Managed Identity
@@ -350,12 +381,14 @@ az containerapp show \
   --query properties.runningStatus
 ```
 
-### Azure OpenAI connection issues
+### Azure AI Foundry connection issues
 
-- Verify endpoint URL is correct (should end with `.openai.azure.com/`)
+- Verify connection string format is correct (if using connection string)
+- Verify endpoint URL is correct (if using endpoint + key)
 - Check API key is valid
-- Ensure model deployment name matches your Azure OpenAI deployment
-- Verify network connectivity from Container Apps to Azure OpenAI
+- Ensure model deployment name matches your Azure AI Foundry deployment
+- Verify agent service is enabled in your Azure AI project
+- Verify network connectivity from Container Apps to Azure AI Foundry
 
 ## Cost Optimization
 
@@ -394,9 +427,9 @@ az group delete \
 ## Additional Resources
 
 - [Azure Container Apps Documentation](https://docs.microsoft.com/en-us/azure/container-apps/)
-- [Azure OpenAI Service Documentation](https://docs.microsoft.com/en-us/azure/cognitive-services/openai/)
+- [Azure AI Foundry Documentation](https://learn.microsoft.com/en-us/azure/ai-studio/)
+- [Azure AI Agent Service Documentation](https://learn.microsoft.com/en-us/azure/ai-services/agents/)
 - [Azure CLI Reference](https://docs.microsoft.com/en-us/cli/azure/)
-- [Semantic Kernel Documentation](https://learn.microsoft.com/en-us/semantic-kernel/)
 
 ## Support
 

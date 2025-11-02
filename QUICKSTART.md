@@ -21,16 +21,38 @@ Choose your preferred method:
 - ✅ Docker Desktop ([Download](https://www.docker.com/products/docker-desktop))
 - ✅ Azure OpenAI access with API key
 
-## Step 1: Get Azure OpenAI Credentials
+## Step 1: Choose Your Authentication Method
 
-You need an Azure OpenAI resource with a deployed model:
+### Option A: Entra ID (Recommended - No keys needed!)
 
-1. Go to [Azure Portal](https://portal.azure.com)
-2. Create or navigate to your Azure OpenAI resource
+1. Install Azure CLI:
+   ```powershell
+   winget install Microsoft.AzureCLI
+   ```
+
+2. Login to Azure:
+   ```powershell
+   az login
+   ```
+
+3. You're done! The app will use your Azure credentials automatically.
+
+### Option B: API Key (For Testing)
+
+1. Go to [Azure AI Foundry](https://ai.azure.com)
+2. Navigate to your Azure AI project
+3. Go to **Settings** → **Keys and Endpoint**
+4. Copy your API key
+
+## Step 1b: Get Azure AI Foundry Project Details
+
+You need an Azure AI Foundry project with a deployed model:
+
+1. Go to [Azure AI Foundry](https://ai.azure.com)
+2. Create or navigate to your Azure AI project
 3. Deploy a model (gpt-4, gpt-35-turbo, or gpt-4o)
 4. Copy these values:
-   - **Endpoint**: `https://your-resource.openai.azure.com/`
-   - **API Key**: Found in "Keys and Endpoint" section
+   - **Project Endpoint**: `https://your-foundry.services.ai.azure.com/api/projects/YourProject`
    - **Model Name**: Your deployment name (e.g., "gpt-4")
 
 ## Step 2: Clone and Configure
@@ -47,9 +69,15 @@ cp .env.example .env
 nano .env  # or use your favorite editor
 ```
 
-Your `.env` should look like:
+Your `.env` should look like (Option 1 - Connection String):
 ```bash
-AZURE_AI_PROJECT_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_AI_CONNECTION_STRING=your-connection-string-here
+AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
+```
+
+Or (Option 2 - Endpoint and Key):
+```bash
+AZURE_AI_PROJECT_ENDPOINT=https://your-project.cognitiveservices.azure.com/
 AZURE_AI_API_KEY=your-api-key-here
 AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
 ```
@@ -108,10 +136,11 @@ Open your browser to: **http://localhost:8080**
 
 ## Troubleshooting
 
-### "Cannot connect to Azure OpenAI"
-- ✅ Check your endpoint URL ends with `.openai.azure.com/`
-- ✅ Verify API key is correct
-- ✅ Ensure model is deployed in Azure
+### "Cannot connect to Azure AI Foundry"
+- ✅ Check your connection string or endpoint URL is correct
+- ✅ Verify API key is correct (if not using connection string)
+- ✅ Ensure model is deployed in Azure AI Foundry
+- ✅ Verify agent service is enabled in your project
 
 ### "Model not found"
 - ✅ Check deployment name matches exactly

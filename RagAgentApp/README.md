@@ -1,6 +1,6 @@
 # RAG Agent System
 
-A dual-agent AI system powered by Microsoft Semantic Kernel and Azure AI Foundry for Standard Operating Procedures (SOP) and Policy information retrieval.
+A dual-agent AI system powered by Azure AI Agent Service and Azure AI Foundry for Standard Operating Procedures (SOP) and Policy information retrieval.
 
 ## Features
 
@@ -14,11 +14,14 @@ A dual-agent AI system powered by Microsoft Semantic Kernel and Azure AI Foundry
 
 - **Container-Ready**: Fully dockerized for easy deployment to Azure Container Apps or any container platform
 
+- **Agent Reuse**: Automatically detects and reuses existing agents in Azure AI Foundry
+
 ## Architecture
 
 The application uses a clean architecture with:
 - **Blazor Server** for the interactive UI
-- **Microsoft Semantic Kernel** as the agentic framework
+- **Azure AI Agent Service** as the agentic framework
+- **Azure AI Foundry** for agent lifecycle management
 - **Azure OpenAI** for LLM capabilities
 - **Orchestrator Service** for managing agent communication
 - **Specialized Agents** with distinct system prompts and capabilities
@@ -27,34 +30,69 @@ The application uses a clean architecture with:
 
 - .NET 9.0 SDK
 - Docker (for containerized deployment)
-- Azure OpenAI or Azure AI Foundry account with:
+- Azure AI Foundry project with:
   - A deployed GPT model (e.g., gpt-4, gpt-35-turbo, gpt-4o)
-  - API endpoint and key
+  - Project connection string OR endpoint and API key
+  - Agent service enabled
 
 ## Configuration
 
-### Local Development
+### Authentication
+
+This application supports two authentication methods:
+
+1. **Entra ID (Recommended for Production)** - Uses Azure CLI, Managed Identity, or Service Principal
+2. **API Key (Development/Testing)** - Uses API key authentication
+
+📖 **See [AUTHENTICATION.md](AUTHENTICATION.md) for detailed authentication setup**
+
+### Local Development with Entra ID (Recommended)
 
 1. Clone the repository
-2. Create an `appsettings.Development.json` file or set environment variables:
+2. Login to Azure CLI:
+   ```powershell
+   az login
+   ```
+3. Configure `appsettings.Development.json`:
+   ```json
+   {
+     "AzureAI": {
+       "ProjectEndpoint": "https://your-foundry.services.ai.azure.com/api/projects/YourProject",
+       "ModelDeploymentName": "gpt-4"
+     }
+   }
+   ```
+4. Run the application - it will automatically use your Azure CLI credentials!
+
+### Alternative: API Key for Testing
+
+If you prefer using an API key for local testing:
 
 ```json
 {
   "AzureAI": {
-    "ProjectEndpoint": "https://your-resource.openai.azure.com/",
+    "ProjectEndpoint": "https://your-foundry.services.ai.azure.com/api/projects/YourProject",
     "ApiKey": "your-api-key",
     "ModelDeploymentName": "gpt-4"
   }
 }
 ```
 
+⚠️ **Never commit API keys to source control!**
+
 ### Environment Variables
 
-The application supports configuration via environment variables (useful for container deployments):
+For container deployments and CI/CD:
 
-- `AZURE_AI_PROJECT_ENDPOINT`: Your Azure OpenAI endpoint
-- `AZURE_AI_API_KEY`: Your Azure OpenAI API key
-- `AZURE_AI_MODEL_DEPLOYMENT_NAME`: Your deployed model name (default: gpt-4)
+**Entra ID (Recommended):**
+- `AZURE_AI_PROJECT_ENDPOINT`: Your Azure AI Foundry project endpoint
+- `AZURE_AI_MODEL_DEPLOYMENT_NAME`: Your deployed model name
+- `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET`: Service principal credentials (optional)
+
+**API Key (Not recommended for production):**
+- `AZURE_AI_PROJECT_ENDPOINT`: Your Azure AI Foundry project endpoint
+- `AZURE_AI_API_KEY`: Your API key
+- `AZURE_AI_MODEL_DEPLOYMENT_NAME`: Your deployed model name
 
 ## Running Locally
 
@@ -195,8 +233,8 @@ az containerapp show \
 RagAgentApp/
 ├── Agents/              # Agent implementations
 │   ├── IAgentService.cs
-│   ├── SopRagAgent.cs
-│   └── PolicyRagAgent.cs
+│   ├── SopRagAgent.cs   # Uses Azure AI Agent Service
+│   └── PolicyRagAgent.cs # Uses Azure AI Agent Service
 ├── Components/          # Blazor components
 │   ├── Layout/
 │   └── Pages/
@@ -215,15 +253,23 @@ RagAgentApp/
 ### Adding New Agents
 
 1. Create a new agent class implementing `IAgentService`
-2. Define a unique system prompt for the agent's specialty
-3. Register the agent in `Program.cs`
-4. Update the UI to display the new agent's responses
+2. Inject `AgentsClient` and model deployment name in constructor
+3. Define a unique system prompt for the agent's specialty
+4. Implement agent reuse logic (check for existing agents in Azure AI Foundry)
+5. Register the agent in `Program.cs` as a scoped service
+6. Update the UI to display the new agent's responses
 
 ### Customizing Agents
 
 Edit the system prompts in the agent classes to customize behavior:
-- `SopRagAgent.cs` - Modify SOP expertise
-- `PolicyRagAgent.cs` - Modify policy expertise
+- `SopRagAgent.cs` - Modify SOP expertise and system prompt
+- `PolicyRagAgent.cs` - Modify policy expertise and system prompt
+
+Each agent automatically:
+- Checks for existing agents in Azure AI Foundry by name
+- Reuses existing agents if found
+- Creates new agents only when needed
+- Manages conversation threads for each query
 
 ## Troubleshooting
 

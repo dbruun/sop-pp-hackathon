@@ -2,26 +2,33 @@
 
 ## Overview
 
-Successfully implemented a complete .NET Blazor web application with dual RAG agents for Standard Operating Procedures (SOP) and Policy management using Microsoft Semantic Kernel and Azure AI Foundry.
+Successfully implemented a complete .NET Blazor web application with dual RAG agents for Standard Operating Procedures (SOP) and Policy management using Azure AI Agent Service and Azure AI Foundry.
 
 ## What Was Built
 
 ### Core Application
 - **Technology Stack**:
   - .NET 9.0 Blazor Server application
-  - Microsoft Semantic Kernel 1.66.0 (Agentic Framework)
-  - Azure OpenAI integration via Semantic Kernel connectors
+  - Azure.AI.Projects SDK 1.0.0-beta.2 (Azure AI Agent Service)
+  - Azure AI Foundry for agent lifecycle management
+  - Azure OpenAI integration via Agent Service
   - Bootstrap 5 for responsive UI
 
 ### Agent System
 1. **SOP RAG Agent** (`Agents/SopRagAgent.cs`):
+   - Uses Azure AI Agent Service via `AgentsClient`
+   - Checks for existing "SOP Expert Agent" in Azure AI Foundry
+   - Reuses existing agents or creates new ones
    - Specialized system prompt for Standard Operating Procedures expertise
-   - Processes queries about work instructions and process documentation
+   - Thread-based conversation management
    - Returns structured, clear responses
 
 2. **Policy RAG Agent** (`Agents/PolicyRagAgent.cs`):
+   - Uses Azure AI Agent Service via `AgentsClient`
+   - Checks for existing "Policy Expert Agent" in Azure AI Foundry
+   - Reuses existing agents or creates new ones
    - Specialized system prompt for Policy and compliance expertise
-   - Handles questions about regulations, governance, and policies
+   - Thread-based conversation management
    - Provides authoritative, citation-ready responses
 
 3. **Orchestrator Service** (`Services/OrchestratorService.cs`):
@@ -94,25 +101,28 @@ Orchestrator Service
 SOP Agent  Policy Agent
    └───┬───┘
        ↓
-Semantic Kernel
+AgentsClient (Azure.AI.Projects)
        ↓
-Azure OpenAI
+Azure AI Foundry
+  (Agent Service + Azure OpenAI)
 ```
 
 ## Key Features Implemented
 
 ✅ Dual-agent system with specialized prompts
+✅ Agent reuse across application restarts (checks Azure AI Foundry)
+✅ Thread-based conversation management
 ✅ Parallel query execution via orchestrator
 ✅ Real-time interactive chat UI with two response panels
 ✅ User input box with keyboard support
 ✅ Message history with timestamps
 ✅ Responsive Bootstrap-based design
-✅ Configuration via appsettings.json or environment variables
+✅ Configuration via connection string, appsettings.json, or environment variables
 ✅ Docker containerization with multi-stage build
 ✅ docker-compose for local development
 ✅ Azure Container Apps deployment support
 ✅ Managed Identity support for secure Azure access
-✅ Comprehensive documentation
+✅ Comprehensive documentation including migration guide
 ✅ Production-ready error handling
 
 ## Configuration Options
@@ -199,12 +209,14 @@ Potential improvements that could be added:
 
 ## Technical Decisions
 
-### Why Semantic Kernel?
-- Official Microsoft agentic framework
-- Clean abstraction over Azure OpenAI
-- Built-in support for chat completion
-- Extensible plugin architecture
-- Active development and support
+### Why Azure AI Agent Service?
+- Official Microsoft agentic framework from Azure AI Foundry
+- True agent lifecycle management with persistence
+- Thread-based conversations with state management
+- Built-in support for RAG, function calling, and tools
+- Agent reuse prevents duplicate resource creation
+- Cloud-native scalability and reliability
+- Active development and enterprise support
 
 ### Why Blazor Server?
 - Real-time communication built-in
@@ -228,9 +240,18 @@ The application is complete and production-ready. All requirements from the prob
 - ✅ User input box
 - ✅ Questions passed to both agents
 - ✅ Orchestration layer
-- ✅ Microsoft agentic framework (Semantic Kernel)
-- ✅ Azure AI Foundry compatible
+- ✅ Microsoft agentic framework (Azure AI Agent Service)
+- ✅ Azure AI Foundry native integration
+- ✅ Agent persistence and reuse
 - ✅ Container support for deployment
 - ✅ Local debugging capabilities
 
-The application is ready for testing with valid Azure OpenAI credentials and deployment to Azure Container Apps.
+The application is ready for testing with valid Azure AI Foundry credentials and deployment to Azure Container Apps.
+
+## Migration Notes
+
+The application was migrated from Microsoft Semantic Kernel to Azure AI Agent Service. See `MIGRATION.md` for detailed information about:
+- Package changes (removed Semantic Kernel, added Azure.AI.Projects)
+- Architecture improvements (agent persistence, thread management)
+- Configuration updates (connection string support)
+- Benefits of the new approach
