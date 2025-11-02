@@ -5,12 +5,12 @@ namespace RagAgentApp.Services;
 
 public class OrchestratorService
 {
-    private readonly IEnumerable<IAgentService> _agents;
+    private readonly List<IAgentService> _agents;
     private readonly ILogger<OrchestratorService> _logger;
 
-    public OrchestratorService(IEnumerable<IAgentService> agents, ILogger<OrchestratorService> logger)
+    public OrchestratorService(SopRagAgent sopAgent, PolicyRagAgent policyAgent, ILogger<OrchestratorService> logger)
     {
-        _agents = agents;
+        _agents = new List<IAgentService> { sopAgent, policyAgent };
         _logger = logger;
         
         var agentNames = string.Join(", ", _agents.Select(a => a.AgentName));

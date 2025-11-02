@@ -44,31 +44,50 @@
             </div>
         </div>
 
+        <!-- Current Question Display -->
+        @if (!string.IsNullOrEmpty(currentQuestion))
+        {
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h6 class="mb-0">💬 Current Question</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0"><strong>@currentQuestion</strong></p>
+                        <small class="text-muted">@questionTimestamp.ToString("MMM dd, yyyy HH:mm:ss")</small>
+                    </div>
+                </div>
+            </div>
+        }
+
         <!-- SOP Agent Response -->
         <div class="col-md-6 mb-4">
             <div class="card h-100">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">📋 SOP Agent Response</h5>
                 </div>
-                <div class="card-body" style="height: 500px; overflow-y: auto;">
-                    @if (sopMessages.Any())
+                <div class="card-body" style="height: 400px; overflow-y: auto;">
+                    @if (!string.IsNullOrEmpty(sopResponse))
                     {
-                        @foreach (var message in sopMessages)
-                        {
-                            <div class="message mb-3 @(message.IsUser ? "user-message" : "agent-message")">
-                                <div class="message-header">
-                                    <strong>@message.Sender</strong>
-                                    <small class="text-muted ms-2">@message.Timestamp.ToLocalTime().ToString("HH:mm:ss")</small>
-                                </div>
-                                <div class="message-content mt-1">
-                                    @message.Content
-                                </div>
+                        <div class="agent-response">
+                            <div class="response-content">
+                                @sopResponse
                             </div>
-                        }
+                            <small class="text-muted">@responseTimestamp.ToString("HH:mm:ss")</small>
+                        </div>
+                    }
+                    else if (isProcessing)
+                    {
+                        <div class="text-center mt-5">
+                            <div class="spinner-border text-success" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted mt-2">SOP Agent is thinking...</p>
+                        </div>
                     }
                     else
                     {
-                        <p class="text-muted text-center mt-5">No messages yet. Ask a question to get started!</p>
+                        <p class="text-muted text-center mt-5">No response yet. Ask a question to get started!</p>
                     }
                 </div>
             </div>
@@ -80,25 +99,28 @@
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0">📜 Policy Agent Response</h5>
                 </div>
-                <div class="card-body" style="height: 500px; overflow-y: auto;">
-                    @if (policyMessages.Any())
+                <div class="card-body" style="height: 400px; overflow-y: auto;">
+                    @if (!string.IsNullOrEmpty(policyResponse))
                     {
-                        @foreach (var message in policyMessages)
-                        {
-                            <div class="message mb-3 @(message.IsUser ? "user-message" : "agent-message")">
-                                <div class="message-header">
-                                    <strong>@message.Sender</strong>
-                                    <small class="text-muted ms-2">@message.Timestamp.ToLocalTime().ToString("HH:mm:ss")</small>
-                                </div>
-                                <div class="message-content mt-1">
-                                    @message.Content
-                                </div>
+                        <div class="agent-response">
+                            <div class="response-content">
+                                @policyResponse
                             </div>
-                        }
+                            <small class="text-muted">@responseTimestamp.ToString("HH:mm:ss")</small>
+                        </div>
+                    }
+                    else if (isProcessing)
+                    {
+                        <div class="text-center mt-5">
+                            <div class="spinner-border text-info" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted mt-2">Policy Agent is thinking...</p>
+                        </div>
                     }
                     else
                     {
-                        <p class="text-muted text-center mt-5">No messages yet. Ask a question to get started!</p>
+                        <p class="text-muted text-center mt-5">No response yet. Ask a question to get started!</p>
                     }
                 </div>
             </div>
@@ -107,33 +129,30 @@
 </div>
 
 <style>
-    .message {
-        padding: 10px;
+    .agent-response {
+        padding: 15px;
         border-radius: 8px;
         background-color: #f8f9fa;
-    }
-    
-    .user-message {
-        background-color: #e3f2fd;
-        border-left: 4px solid #2196f3;
-    }
-    
-    .agent-message {
-        background-color: #f1f8e9;
         border-left: 4px solid #8bc34a;
     }
     
-    .message-content {
+    .response-content {
         white-space: pre-wrap;
         word-wrap: break-word;
+        line-height: 1.6;
     }
 </style>
 
 @code {
     private string userInput = string.Empty;
     private bool isProcessing = false;
-    private List<ChatMessage> sopMessages = new();
-    private List<ChatMessage> policyMessages = new();
+    
+    private string currentQuestion = string.Empty;
+    private DateTime questionTimestamp = DateTime.Now;
+    
+    private string sopResponse = string.Empty;
+    private string policyResponse = string.Empty;
+    private DateTime responseTimestamp = DateTime.Now;
 
     private async Task HandleKeyPress(KeyboardEventArgs e)
     {
@@ -149,24 +168,15 @@
             return;
 
         isProcessing = true;
+        
+        // Set current question and clear previous responses
+        currentQuestion = userInput;
+        questionTimestamp = DateTime.Now;
+        sopResponse = string.Empty;
+        policyResponse = string.Empty;
+        
         var query = userInput;
         userInput = string.Empty;
-
-        // Add user message to both chat histories
-        var userMessage = new ChatMessage
-        {
-            Content = query,
-            Sender = "You",
-            IsUser = true
-        };
-
-        sopMessages.Add(userMessage);
-        policyMessages.Add(new ChatMessage
-        {
-            Content = query,
-            Sender = "You",
-            IsUser = true
-        });
 
         StateHasChanged();
 
@@ -175,44 +185,25 @@
             // Send query to orchestrator which routes to both agents
             var responses = await OrchestratorService.RouteQueryToAgentsAsync(query);
 
-            // Add SOP agent response
+            responseTimestamp = DateTime.Now;
+
+            // Store SOP agent response
             if (responses.ContainsKey("SOP Agent"))
             {
-                sopMessages.Add(new ChatMessage
-                {
-                    Content = responses["SOP Agent"],
-                    Sender = "SOP Agent",
-                    IsUser = false
-                });
+                sopResponse = responses["SOP Agent"];
             }
 
-            // Add Policy agent response
+            // Store Policy agent response
             if (responses.ContainsKey("Policy Agent"))
             {
-                policyMessages.Add(new ChatMessage
-                {
-                    Content = responses["Policy Agent"],
-                    Sender = "Policy Agent",
-                    IsUser = false
-                });
+                policyResponse = responses["Policy Agent"];
             }
         }
         catch (Exception ex)
         {
-            var errorMessage = new ChatMessage
-            {
-                Content = $"Error: {ex.Message}",
-                Sender = "System",
-                IsUser = false
-            };
-            
-            sopMessages.Add(errorMessage);
-            policyMessages.Add(new ChatMessage
-            {
-                Content = $"Error: {ex.Message}",
-                Sender = "System",
-                IsUser = false
-            });
+            responseTimestamp = DateTime.Now;
+            sopResponse = $"Error: {ex.Message}";
+            policyResponse = $"Error: {ex.Message}";
         }
         finally
         {

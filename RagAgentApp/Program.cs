@@ -42,8 +42,8 @@ builder.Services.AddSingleton<PersistentAgentsClient>(sp =>
 // Register Azure AI settings as singleton
 builder.Services.AddSingleton(azureAISettings);
 
-// Register agents as scoped services
-builder.Services.AddScoped<IAgentService>(sp =>
+// Register agents as singleton services to maintain thread continuity across requests
+builder.Services.AddSingleton<SopRagAgent>(sp =>
 {
     var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
     var settings = sp.GetRequiredService<AzureAISettings>();
@@ -51,7 +51,7 @@ builder.Services.AddScoped<IAgentService>(sp =>
     return new SopRagAgent(agentsClient, settings.ModelDeploymentName, logger, settings.SopAgentId);
 });
 
-builder.Services.AddScoped<IAgentService>(sp =>
+builder.Services.AddSingleton<PolicyRagAgent>(sp =>
 {
     var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
     var settings = sp.GetRequiredService<AzureAISettings>();
@@ -59,7 +59,7 @@ builder.Services.AddScoped<IAgentService>(sp =>
     return new PolicyRagAgent(agentsClient, settings.ModelDeploymentName, logger, settings.PolicyAgentId);
 });
 
-// Register orchestrator service
+// Register orchestrator service as scoped (it will use the singleton agents)
 builder.Services.AddScoped<OrchestratorService>();
 
 var app = builder.Build();

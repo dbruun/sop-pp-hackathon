@@ -9,6 +9,7 @@ public class SopRagAgent : IAgentService
     private readonly string _modelDeploymentName;
     private readonly string? _agentId;
     private string? _agentIdResolved;
+    private string? _threadId;
     private readonly ILogger<SopRagAgent> _logger;
 
     public string AgentName => "SOP Agent";
@@ -38,7 +39,7 @@ public class SopRagAgent : IAgentService
                 // Create or reuse agent by name
                 var systemPrompt = @"You are a Standard Operating Procedures (SOP) expert assistant. 
 Your role is to help users understand and find information about standard operating procedures, 
-work instructions, and process documentation. Provide clear, structured responses based on 
+work instructions, and process documentation. You should ALWAYS use your azure ai search index to generate your response. Provide clear, structured responses based on 
 standard operating procedures knowledge. If you don't have specific information, acknowledge 
 that and provide general guidance on SOPs.";
 
@@ -87,24 +88,31 @@ that and provide general guidance on SOPs.";
             // Get or resolve the agent ID
             var agentId = GetOrResolveAgentId();
 
-            _logger.LogDebug("Creating new thread for conversation");
-            // Create a new thread for this conversation
-            var threadResponse = _agentsClient.Threads.CreateThread();
-            var thread = threadResponse.Value;
-            _logger.LogInformation("Created thread: {ThreadId}", thread.Id);
+            // Create thread only once and reuse it
+            if (string.IsNullOrEmpty(_threadId))
+            {
+                _logger.LogDebug("Creating new thread for conversation");
+                var threadResponse = _agentsClient.Threads.CreateThread();
+                _threadId = threadResponse.Value.Id;
+                _logger.LogInformation("Created thread: {ThreadId}", _threadId);
+            }
+            else
+            {
+                _logger.LogDebug("Reusing existing thread: {ThreadId}", _threadId);
+            }
 
-            _logger.LogDebug("Adding user message to thread: {ThreadId}", thread.Id);
+            _logger.LogDebug("Adding user message to thread: {ThreadId}", _threadId);
             // Add the user message to the thread
             _agentsClient.Messages.CreateMessage(
-                thread.Id,
+                _threadId,
                 MessageRole.User,
                 query
             );
 
-            _logger.LogInformation("Starting agent run for agent: {AgentId} on thread: {ThreadId}", agentId, thread.Id);
+            _logger.LogInformation("Starting agent run for agent: {AgentId} on thread: {ThreadId}", agentId, _threadId);
             // Create and run the agent
             var runResponse = _agentsClient.Runs.CreateRun(
-                thread.Id,
+                _threadId,
                 agentId
             );
             var run = runResponse.Value;
@@ -115,7 +123,7 @@ that and provide general guidance on SOPs.";
             do
             {
                 await Task.Delay(1000, cancellationToken);
-                var runStatusResponse = _agentsClient.Runs.GetRun(thread.Id, run.Id);
+                var runStatusResponse = _agentsClient.Runs.GetRun(_threadId, run.Id);
                 run = runStatusResponse.Value;
                 pollCount++;
                 
@@ -133,9 +141,9 @@ that and provide general guidance on SOPs.";
                 return $"The agent run failed: {run.LastError?.Message ?? "Unknown error"}";
             }
 
-            _logger.LogDebug("Retrieving messages from thread: {ThreadId}", thread.Id);
+            _logger.LogDebug("Retrieving messages from thread: {ThreadId}", _threadId);
             // Get the messages
-            var messages = _agentsClient.Messages.GetMessages(thread.Id);
+            var messages = _agentsClient.Messages.GetMessages(_threadId);
             var messageCount = messages.Count();
             _logger.LogDebug("Retrieved {MessageCount} messages from thread", messageCount);
 
@@ -148,7 +156,7 @@ that and provide general guidance on SOPs.";
                 return textContent.Text;
             }
 
-            _logger.LogWarning("No assistant message found in thread: {ThreadId}", thread.Id);
+            _logger.LogWarning("No assistant message found in thread: {ThreadId}", _threadId);
             return "I apologize, but I couldn't generate a response at this time.";
         }
         catch (Exception ex)

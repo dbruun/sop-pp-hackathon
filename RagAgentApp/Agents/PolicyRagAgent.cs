@@ -9,6 +9,7 @@ public class PolicyRagAgent : IAgentService
     private readonly string _modelDeploymentName;
     private readonly string? _agentId;
     private string? _agentIdResolved;
+    private string? _threadId;
     private readonly ILogger<PolicyRagAgent> _logger;
 
     public string AgentName => "Policy Agent";
@@ -40,7 +41,7 @@ public class PolicyRagAgent : IAgentService
         }
 
         var systemPrompt = @"You are a Policy expert assistant. Your role is to help users 
-understand company policies, regulations, compliance requirements, and governance frameworks. 
+understand company policies, regulations, compliance requirements, and governance frameworks.  You should ALWAYS use your azure ai search index to generate your response 
 Provide clear, authoritative responses based on policy knowledge. When discussing policies, 
 cite relevant sections and explain implications. If you don't have specific policy information, 
 acknowledge that and provide general policy guidance.";
@@ -82,22 +83,30 @@ acknowledge that and provide general policy guidance.";
             
             var agentId = GetOrResolveAgentId();
 
-            _logger.LogDebug("Creating new thread for conversation");
-            var threadResponse = _agentsClient.Threads.CreateThread(cancellationToken: cancellationToken);
-            var threadId = threadResponse.Value.Id;
-            _logger.LogInformation("Created thread: {ThreadId}", threadId);
+            // Create thread only once and reuse it
+            if (string.IsNullOrEmpty(_threadId))
+            {
+                _logger.LogDebug("Creating new thread for conversation");
+                var threadResponse = _agentsClient.Threads.CreateThread(cancellationToken: cancellationToken);
+                _threadId = threadResponse.Value.Id;
+                _logger.LogInformation("Created thread: {ThreadId}", _threadId);
+            }
+            else
+            {
+                _logger.LogDebug("Reusing existing thread: {ThreadId}", _threadId);
+            }
 
-            _logger.LogDebug("Adding user message to thread: {ThreadId}", threadId);
+            _logger.LogDebug("Adding user message to thread: {ThreadId}", _threadId);
             _agentsClient.Messages.CreateMessage(
-                threadId,
+                _threadId,
                 MessageRole.User,
                 query,
                 cancellationToken: cancellationToken
             );
 
-            _logger.LogInformation("Starting agent run for agent: {AgentId} on thread: {ThreadId}", agentId, threadId);
+            _logger.LogInformation("Starting agent run for agent: {AgentId} on thread: {ThreadId}", agentId, _threadId);
             var runResponse = _agentsClient.Runs.CreateRun(
-                threadId,
+                _threadId,
                 agentId,
                 cancellationToken: cancellationToken
             );
@@ -109,7 +118,7 @@ acknowledge that and provide general policy guidance.";
             do
             {
                 await Task.Delay(1000, cancellationToken);
-                var runStatusResponse = _agentsClient.Runs.GetRun(threadId, run.Id, cancellationToken);
+                var runStatusResponse = _agentsClient.Runs.GetRun(_threadId, run.Id, cancellationToken);
                 run = runStatusResponse.Value;
                 pollCount++;
                 
@@ -127,9 +136,9 @@ acknowledge that and provide general policy guidance.";
                 return $"The agent run failed: {run.LastError?.Message ?? "Unknown error"}";
             }
 
-            _logger.LogDebug("Retrieving messages from thread: {ThreadId}", threadId);
+            _logger.LogDebug("Retrieving messages from thread: {ThreadId}", _threadId);
             var messagesResponse = _agentsClient.Messages.GetMessages(
-                threadId,
+                _threadId,
                 cancellationToken: cancellationToken
             );
 
@@ -147,7 +156,7 @@ acknowledge that and provide general policy guidance.";
                 return textContent.Text;
             }
 
-            _logger.LogWarning("No assistant message found in thread: {ThreadId}", threadId);
+            _logger.LogWarning("No assistant message found in thread: {ThreadId}", _threadId);
             return "I apologize, but I couldn't generate a response at this time.";
         }
         catch (Exception ex)
