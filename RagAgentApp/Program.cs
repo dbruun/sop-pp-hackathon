@@ -59,8 +59,16 @@ builder.Services.AddSingleton<PolicyRagAgent>(sp =>
     return new PolicyRagAgent(agentsClient, settings.ModelDeploymentName, logger, settings.PolicyAgentId);
 });
 
-// Register orchestrator service as scoped (it will use the singleton agents)
-builder.Services.AddScoped<OrchestratorService>();
+// Register orchestrator service as singleton (it's now an agent itself with function calling)
+builder.Services.AddSingleton<OrchestratorService>(sp =>
+{
+    var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
+    var settings = sp.GetRequiredService<AzureAISettings>();
+    var sopAgent = sp.GetRequiredService<SopRagAgent>();
+    var policyAgent = sp.GetRequiredService<PolicyRagAgent>();
+    var logger = sp.GetRequiredService<ILogger<OrchestratorService>>();
+    return new OrchestratorService(agentsClient, settings.ModelDeploymentName, sopAgent, policyAgent, logger);
+});
 
 var app = builder.Build();
 

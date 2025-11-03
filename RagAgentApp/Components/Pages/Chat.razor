@@ -182,18 +182,17 @@
 
         try
         {
-            // Send query to orchestrator which routes to both agents
+            // Send query to orchestrator agent which calls both SOP and Policy agents
             var responses = await OrchestratorService.RouteQueryToAgentsAsync(query);
 
             responseTimestamp = DateTime.Now;
 
-            // Store SOP agent response
+            // Store individual agent responses
             if (responses.ContainsKey("SOP Agent"))
             {
                 sopResponse = responses["SOP Agent"];
             }
 
-            // Store Policy agent response
             if (responses.ContainsKey("Policy Agent"))
             {
                 policyResponse = responses["Policy Agent"];
