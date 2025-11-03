@@ -12,7 +12,13 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       # Azure AI Configuration - set these via environment variables or .env file
       - AZURE_AI_PROJECT_ENDPOINT=${AZURE_AI_PROJECT_ENDPOINT}
-      - AZURE_AI_API_KEY=${AZURE_AI_API_KEY}
       - AZURE_AI_MODEL_DEPLOYMENT_NAME=${AZURE_AI_MODEL_DEPLOYMENT_NAME:-gpt-4}
+      # Optional: API Key (for testing only - Entra ID is preferred)
+      - AZURE_AI_API_KEY=${AZURE_AI_API_KEY}
+      # Optional: Pre-created agent IDs
+      - AZURE_AI_SOP_AGENT_ID=${AZURE_AI_SOP_AGENT_ID}
+      - AZURE_AI_POLICY_AGENT_ID=${AZURE_AI_POLICY_AGENT_ID}
     volumes:
+      # Mount Azure CLI credentials for Entra ID authentication (recommended)
+      - ~/.azure:/root/.azure:ro
       - ./appsettings.Development.json:/app/appsettings.Development.json:ro

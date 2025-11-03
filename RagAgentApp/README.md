@@ -256,7 +256,7 @@ RagAgentApp/
 ### Adding New Agents
 
 1. Create a new agent class implementing `IAgentService`
-2. Inject `AgentsClient` and model deployment name in constructor
+2. Inject `PersistentAgentsClient` and model deployment name in constructor
 3. Define a unique system prompt for the agent's specialty
 4. Implement agent reuse logic (check for existing agents in Azure AI Foundry)
 5. Register the agent in `Program.cs` as a scoped service
