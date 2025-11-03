@@ -129,14 +129,14 @@ public interface IAgentService
 
 #### Azure.AI.Projects SDK
 - **Purpose**: Azure AI Agent Service client
-- **Key Component**: `AgentsClient`
+- **Key Component**: `PersistentAgentsClient`
 - **Services**:
   - Agent creation and management
   - Thread-based conversations
   - Run orchestration and polling
   - Message management
-- **Configuration**: Connection string or endpoint + API key
-- **Authentication**: API key or Managed Identity
+- **Configuration**: Project endpoint + DefaultAzureCredential
+- **Authentication**: DefaultAzureCredential (Azure CLI, Managed Identity, Service Principal, etc.)
 
 #### Azure AI Foundry
 - **Agent Service**: Manages agent lifecycle in the cloud
@@ -146,7 +146,7 @@ public interface IAgentService
   - Thread-based conversations
   - Built-in RAG capabilities
   - Function calling support
-- **Authentication**: Connection string, API key, or Managed Identity
+- **Authentication**: DefaultAzureCredential (preferred), or API key for testing
 
 ## Data Flow
 
@@ -257,15 +257,14 @@ Azure OpenAI
 
 ### Secret Management
 ```
-Local:
-  .env file → Environment Variables
-
-Azure:
-  Key Vault → Container App Secrets → Environment Variables
+Local Development:
+  Azure CLI (az login) → DefaultAzureCredential
   
-  OR
+Azure Deployment:
+  Managed Identity → DefaultAzureCredential → Azure AI Foundry (keyless)
   
-  Managed Identity → Azure OpenAI (keyless)
+Alternative (Testing Only):
+  Key Vault → Container App Secrets → Environment Variables → API Key
 ```
 
 ## Scalability Architecture
@@ -400,13 +399,14 @@ Operations Team
 - Excellent tooling
 
 ### Why Azure AI Agent Service?
-- Official Microsoft agentic framework
+- Official Microsoft agentic framework from Azure AI Foundry
 - Native Azure AI Foundry integration
 - Persistent agent lifecycle management
 - Thread-based conversation management
 - Built-in RAG and tool support
 - Agent reuse across application restarts
 - Scalable cloud-based execution
+- Secure authentication via DefaultAzureCredential
 
 ### Why Container Apps?
 - Serverless containers
