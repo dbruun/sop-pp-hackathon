@@ -2,20 +2,54 @@
 
 RAG Agent System for Standard Operating Procedures and Policy Management
 
-## 🎯 Hackathon Version
-
-**This is the hackathon-ready branch!** The agent implementations are stubbed out to provide a learning experience.
-
-👉 **Start here**: [HACKATHON.md](HACKATHON.md) - Complete guide for implementing the agents
-
-## Overview
+## 🎯 Overview
 
 This repository contains a .NET Blazor web application that implements a dual-agent RAG (Retrieval-Augmented Generation) system using Azure AI Agent Service and Azure AI Foundry. The application features two specialized AI agents that simultaneously answer user queries:
 
 - **SOP Agent**: Expert in Standard Operating Procedures, work instructions, and process documentation
 - **Policy Agent**: Expert in company policies, regulations, and compliance requirements
 
-**Current Status**: UI is fully functional, agent implementations are stubbed and ready for you to implement!
+## 🚀 Quick Start
+
+Get started in 5 minutes:
+
+```bash
+# Clone the repository
+git clone https://github.com/dbruun/sop-pp-hackathon.git
+cd sop-pp-hackathon
+
+# Login to Azure (for authentication)
+az login
+
+# Configure and run
+cd RagAgentApp
+# Edit appsettings.Development.json with your Azure AI Foundry endpoint
+dotnet run
+```
+
+Open your browser to: **http://localhost:5000**
+
+📖 **See the [Getting Started Guide](docs/GETTING_STARTED.md) for detailed setup instructions**
+
+## 🎓 For Hackathon Participants
+
+**This version has stubbed agent implementations!** Perfect for learning how to build AI agent systems.
+
+👉 **Start here**: [Hackathon Guide](docs/guides/HACKATHON_GUIDE.md) - Complete implementation guide
+
+## 📚 Documentation
+
+### Getting Started
+- [Getting Started Guide](docs/GETTING_STARTED.md) - Quick setup and configuration
+- [Authentication Setup](docs/guides/AUTHENTICATION.md) - Azure authentication methods
+
+### Implementation
+- [Hackathon Guide](docs/guides/HACKATHON_GUIDE.md) - Step-by-step implementation for hackathon
+- [Architecture Overview](RagAgentApp/ARCHITECTURE.md) - System architecture and design
+
+### Deployment
+- [Azure Deployment](docs/deployment/AZURE_DEPLOYMENT.md) - Deploy to Azure Container Apps
+- [RagAgentApp README](RagAgentApp/README.md) - Application-specific configuration
 
 ## Features
 
@@ -23,22 +57,7 @@ This repository contains a .NET Blazor web application that implements a dual-ag
 - 💬 **Interactive Chat Interface**: Real-time responses in separate panels for each agent
 - 🐳 **Container-Ready**: Fully dockerized for easy deployment
 - ☁️ **Azure Container Apps Support**: Deploy to Azure with managed identity support
-- 🔒 **Secure Configuration**: Supports both API keys and Azure managed identities
-
-## Quick Start
-
-Navigate to the application directory:
-
-```bash
-cd RagAgentApp
-```
-
-See the [RagAgentApp/README.md](RagAgentApp/README.md) for detailed setup and usage instructions.
-
-## Documentation
-
-- [Application README](RagAgentApp/README.md) - Setup, configuration, and local development
-- [Deployment Guide](RagAgentApp/DEPLOYMENT.md) - Azure Container Apps deployment instructions
+- 🔒 **Secure Authentication**: Supports Entra ID (keyless) and API key authentication
 
 ## Architecture
 
@@ -63,7 +82,8 @@ See the [RagAgentApp/README.md](RagAgentApp/README.md) for detailed setup and us
      └────┬─────┘
           ▼
    ┌──────────────┐
-   │ Azure OpenAI │
+   │ Azure AI     │
+   │ Agent Service│
    └──────────────┘
 ```
 
@@ -77,32 +97,11 @@ See the [RagAgentApp/README.md](RagAgentApp/README.md) for detailed setup and us
 - **Docker**: Containerization
 - **Azure Container Apps**: Cloud deployment platform
 
-## Getting Started
+## Prerequisites
 
-1. **Prerequisites**:
-   - .NET 9.0 SDK
-   - Azure AI Foundry project with deployed model
-   - Docker (optional, for containerization)
-
-2. **Configuration**:
-   ```bash
-   cd RagAgentApp
-   # Login to Azure for authentication
-   az login
-   # Configure appsettings.Development.json with your Azure AI Foundry endpoint
-   ```
-
-3. **Run Locally**:
-   ```bash
-   dotnet run
-   ```
-   Or with Docker:
-   ```bash
-   docker-compose up
-   ```
-
-4. **Deploy to Azure**:
-   Follow the [Deployment Guide](RagAgentApp/DEPLOYMENT.md)
+- .NET 9.0 SDK ([Download](https://dotnet.microsoft.com/download))
+- Azure AI Foundry project with deployed model
+- Docker (optional, for containerization)
 
 ## Contributing
 

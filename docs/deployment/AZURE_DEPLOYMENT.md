@@ -4,11 +4,9 @@ This guide provides step-by-step instructions for deploying the RAG Agent System
 
 ## Prerequisites
 
-Before you begin, ensure you have:
-
 1. **Azure Subscription**: An active Azure subscription
 2. **Azure CLI**: Installed and configured ([Install Guide](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli))
-3. **Azure OpenAI Resource**: Deployed with a model (gpt-4, gpt-35-turbo, or gpt-4o)
+3. **Azure AI Foundry Project**: With a deployed model (gpt-4, gpt-35-turbo, or gpt-4o)
 4. **Docker**: Installed for local testing (optional)
 
 ## Step-by-Step Deployment
@@ -33,12 +31,9 @@ APP_NAME="ragagentapp"
 # Azure AI Foundry configuration
 AZURE_AI_ENDPOINT="https://your-foundry.services.ai.azure.com/api/projects/YourProject"
 MODEL_DEPLOYMENT="gpt-4"  # or gpt-35-turbo, gpt-4o, etc.
-
-# Optional: API Key (only if not using Managed Identity)
-AZURE_AI_KEY="your-api-key-here"
 ```
 
-**Note**: For production, use Managed Identity instead of API keys (see section "Using Managed Identity" below).
+**Note**: For production, use Managed Identity instead of API keys.
 
 ### 3. Create Resource Group
 
@@ -65,7 +60,7 @@ az acr create \
 
 ```bash
 # Navigate to the RagAgentApp directory
-cd /path/to/RagAgentApp
+cd RagAgentApp
 
 # Build and push directly to ACR
 az acr build \
@@ -113,11 +108,7 @@ ACR_PASSWORD=$(az acr credential show \
   --output tsv)
 ```
 
-### 8. Deploy Container App
-
-**Option 1: With Managed Identity (Recommended for Production)**
-
-First enable managed identity, then deploy:
+### 8. Deploy Container App with Managed Identity (Recommended)
 
 ```bash
 az containerapp create \
@@ -141,35 +132,27 @@ az containerapp create \
   --system-assigned
 ```
 
-Then grant the managed identity access to Azure AI Foundry (see "Using Managed Identity" section below).
-
-**Option 2: Using API Key (Testing Only)**
+### 9. Configure Managed Identity Access
 
 ```bash
-az containerapp create \
+# Get the managed identity principal ID
+PRINCIPAL_ID=$(az containerapp identity show \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
-  --environment $CONTAINERAPPS_ENV \
-  --image $ACR_NAME.azurecr.io/ragagentapp:latest \
-  --registry-server $ACR_NAME.azurecr.io \
-  --registry-username $ACR_USERNAME \
-  --registry-password $ACR_PASSWORD \
-  --target-port 8080 \
-  --ingress external \
-  --secrets \
-    azure-ai-api-key="$AZURE_AI_KEY" \
-  --env-vars \
-    ASPNETCORE_ENVIRONMENT=Production \
-    AZURE_AI_PROJECT_ENDPOINT="$AZURE_AI_ENDPOINT" \
-    AZURE_AI_API_KEY=secretref:azure-ai-api-key \
-    AZURE_AI_MODEL_DEPLOYMENT_NAME="$MODEL_DEPLOYMENT" \
-  --cpu 1.0 \
-  --memory 2.0Gi \
-  --min-replicas 1 \
-  --max-replicas 3
+  --query principalId \
+  --output tsv)
+
+# Grant access to Azure AI Foundry
+# Replace with your actual Azure AI project resource ID
+AI_PROJECT_RESOURCE_ID="/subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_AI_RG/providers/Microsoft.MachineLearningServices/workspaces/YOUR_AI_PROJECT"
+
+az role assignment create \
+  --assignee $PRINCIPAL_ID \
+  --role "Azure AI Developer" \
+  --scope $AI_PROJECT_RESOURCE_ID
 ```
 
-### 9. Get Application URL
+### 10. Get Application URL
 
 ```bash
 APP_URL=$(az containerapp show \
@@ -181,15 +164,9 @@ APP_URL=$(az containerapp show \
 echo "Application is deployed at: https://$APP_URL"
 ```
 
-### 10. Test the Application
-
-Open your browser and navigate to the URL from step 9. You should see the RAG Agent System home page.
-
 ## Configuration Updates
 
 ### Update Environment Variables
-
-If you need to update configuration after deployment:
 
 ```bash
 az containerapp update \
@@ -197,16 +174,6 @@ az containerapp update \
   --resource-group $RESOURCE_GROUP \
   --set-env-vars \
     AZURE_AI_MODEL_DEPLOYMENT_NAME="new-model-name"
-```
-
-### Update Secrets
-
-```bash
-az containerapp secret set \
-  --name $APP_NAME \
-  --resource-group $RESOURCE_GROUP \
-  --secrets \
-    azure-ai-api-key="new-api-key"
 ```
 
 ### Update Container Image
@@ -241,8 +208,6 @@ az containerapp update \
 
 ### Auto-Scaling Rules
 
-Add HTTP scaling rule:
-
 ```bash
 az containerapp update \
   --name $APP_NAME \
@@ -270,15 +235,6 @@ az containerapp logs show \
   --tail 100
 ```
 
-### View Metrics
-
-```bash
-az containerapp show \
-  --name $APP_NAME \
-  --resource-group $RESOURCE_GROUP \
-  --query properties.latestRevisionFqdn
-```
-
 ### Enable Application Insights (Optional)
 
 ```bash
@@ -297,59 +253,13 @@ INSTRUMENTATION_KEY=$(az monitor app-insights component show \
   --query instrumentationKey \
   --output tsv)
 
-# Update container app with Application Insights
+# Update container app
 az containerapp update \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
   --set-env-vars \
     APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=$INSTRUMENTATION_KEY"
 ```
-
-## Using Managed Identity (More Secure)
-
-Instead of using API keys, you can configure managed identity:
-
-### 1. Enable Managed Identity
-
-```bash
-az containerapp identity assign \
-  --name $APP_NAME \
-  --resource-group $RESOURCE_GROUP \
-  --system-assigned
-```
-
-### 2. Get the Identity Principal ID
-
-```bash
-PRINCIPAL_ID=$(az containerapp identity show \
-  --name $APP_NAME \
-  --resource-group $RESOURCE_GROUP \
-  --query principalId \
-  --output tsv)
-```
-
-### 3. Grant Access to Azure AI Foundry
-
-```bash
-# Get your Azure AI Foundry project resource ID
-AI_PROJECT_RESOURCE_ID="/subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_AI_RG/providers/Microsoft.MachineLearningServices/workspaces/YOUR_AI_PROJECT"
-
-az role assignment create \
-  --assignee $PRINCIPAL_ID \
-  --role "Azure AI Developer" \
-  --scope $AI_PROJECT_RESOURCE_ID
-```
-
-### 4. Update Container App to Use Managed Identity
-
-```bash
-az containerapp update \
-  --name $APP_NAME \
-  --resource-group $RESOURCE_GROUP \
-  --remove-env-vars AZURE_AI_API_KEY
-```
-
-The application will automatically use managed identity when `AZURE_AI_API_KEY` is not provided.
 
 ## Troubleshooting
 
@@ -388,33 +298,19 @@ az containerapp show \
 
 - Verify endpoint URL format: `https://your-foundry.services.ai.azure.com/api/projects/YourProject`
 - If using Managed Identity, ensure proper role assignments are in place
-- If using API key, verify it's valid and not expired
 - Ensure model deployment name matches your Azure AI Foundry deployment
 - Verify agent service is enabled in your Azure AI project
-- Verify network connectivity from Container Apps to Azure AI Foundry
 - Check that `DefaultAzureCredential` can authenticate (view container logs for details)
 
 ## Cost Optimization
 
-### Use Consumption Plan
-
-Container Apps automatically scales to zero when not in use:
+### Scale to Zero
 
 ```bash
 az containerapp update \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
   --min-replicas 0
-```
-
-### Monitor Costs
-
-```bash
-# View resource costs
-az consumption usage list \
-  --start-date $(date -d "30 days ago" +%Y-%m-%d) \
-  --end-date $(date +%Y-%m-%d) \
-  --output table
 ```
 
 ## Cleanup
@@ -433,11 +329,3 @@ az group delete \
 - [Azure Container Apps Documentation](https://docs.microsoft.com/en-us/azure/container-apps/)
 - [Azure AI Foundry Documentation](https://learn.microsoft.com/en-us/azure/ai-studio/)
 - [Azure AI Agent Service Documentation](https://learn.microsoft.com/en-us/azure/ai-services/agents/)
-- [Azure CLI Reference](https://docs.microsoft.com/en-us/cli/azure/)
-
-## Support
-
-For issues or questions:
-- Check the [README.md](README.md) for general usage
-- Review Azure Container Apps logs
-- Consult Azure OpenAI service health status
