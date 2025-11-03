@@ -59,15 +59,13 @@ builder.Services.AddSingleton<PolicyRagAgent>(sp =>
     return new PolicyRagAgent(agentsClient, settings.ModelDeploymentName, logger, settings.PolicyAgentId);
 });
 
-// Register orchestrator service as singleton (it's now an agent itself with function calling)
+// Register orchestrator service as singleton - now uses simple parallel execution
 builder.Services.AddSingleton<OrchestratorService>(sp =>
 {
-    var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
-    var settings = sp.GetRequiredService<AzureAISettings>();
     var sopAgent = sp.GetRequiredService<SopRagAgent>();
     var policyAgent = sp.GetRequiredService<PolicyRagAgent>();
     var logger = sp.GetRequiredService<ILogger<OrchestratorService>>();
-    return new OrchestratorService(agentsClient, settings.ModelDeploymentName, sopAgent, policyAgent, logger);
+    return new OrchestratorService(sopAgent, policyAgent, logger);
 });
 
 var app = builder.Build();
