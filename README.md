@@ -11,11 +11,13 @@ This repository contains a .NET Blazor web application that implements a dual-ag
 
 ## Features
 
-- 🤖 **Dual Agent Architecture**: Questions are routed to both agents simultaneously via an orchestrator
+- 🤖 **Dual Agent Architecture**: Questions are routed to both agents via orchestrator with function calling
 - 💬 **Interactive Chat Interface**: Real-time responses in separate panels for each agent
+- 🔐 **Entra ID Authentication**: Keyless authentication via DefaultAzureCredential (recommended)
 - 🐳 **Container-Ready**: Fully dockerized for easy deployment
 - ☁️ **Azure Container Apps Support**: Deploy to Azure with managed identity support
-- 🔒 **Secure Configuration**: Supports both API keys and Azure managed identities
+- 🔄 **Agent Persistence**: Agents stored in Azure AI Foundry and reused across restarts
+- 🔍 **RAG Capabilities**: Built-in Azure AI Search integration for knowledge retrieval
 
 ## Quick Start
 
@@ -63,9 +65,12 @@ See the [RagAgentApp/README.md](RagAgentApp/README.md) for detailed setup and us
 
 - **.NET 9.0**: Latest .NET framework
 - **Blazor Server**: Interactive web UI
-- **Azure AI Agent Service**: Agentic AI framework
-- **Azure AI Foundry**: Agent lifecycle management
-- **Azure OpenAI**: LLM capabilities
+- **Azure.AI.Agents.Persistent (v1.1.0)**: Persistent agent service with lifecycle management
+- **Azure.AI.Projects (v1.0.0)**: Azure AI Foundry integration
+- **Azure.Identity (v1.17.0)**: Entra ID authentication via DefaultAzureCredential
+- **Azure AI Foundry**: Agent lifecycle management and storage
+- **Azure OpenAI**: LLM capabilities (GPT-4, GPT-3.5-Turbo, GPT-4o)
+- **Azure AI Search**: RAG capabilities (optional)
 - **Docker**: Containerization
 - **Azure Container Apps**: Cloud deployment platform
 
@@ -73,27 +78,35 @@ See the [RagAgentApp/README.md](RagAgentApp/README.md) for detailed setup and us
 
 1. **Prerequisites**:
    - .NET 9.0 SDK
+   - Azure CLI (for Entra ID auth): `az login`
    - Azure AI Foundry project with deployed model
+   - Azure AI Developer role assigned to your identity
    - Docker (optional, for containerization)
 
 2. **Configuration**:
    ```bash
    cd RagAgentApp
+   
+   # Login to Azure (for Entra ID authentication)
+   az login
+   
+   # Create config from example
    cp .env.example .env
-   # Edit .env with your Azure OpenAI credentials
+   # Edit .env with your Azure AI Foundry endpoint and model name
+   # No API key needed!
    ```
 
 3. **Run Locally**:
    ```bash
+   # With .NET
    dotnet run
-   ```
-   Or with Docker:
-   ```bash
+   
+   # Or with Docker
    docker-compose up
    ```
 
 4. **Deploy to Azure**:
-   Follow the [Deployment Guide](RagAgentApp/DEPLOYMENT.md)
+   Follow the [Deployment Guide](RagAgentApp/DEPLOYMENT.md) for Container Apps with Managed Identity
 
 ## Contributing
 

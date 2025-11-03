@@ -9,32 +9,39 @@ Successfully implemented a complete .NET Blazor web application with dual RAG ag
 ### Core Application
 - **Technology Stack**:
   - .NET 9.0 Blazor Server application
-  - Azure.AI.Projects SDK 1.0.0-beta.2 (Azure AI Agent Service)
+  - Azure.AI.Agents.Persistent SDK 1.1.0 (Persistent Agent Service)
+  - Azure.AI.Projects SDK 1.0.0 (Azure AI Foundry integration)
+  - Azure.Identity 1.17.0 (DefaultAzureCredential for Entra ID)
   - Azure AI Foundry for agent lifecycle management
   - Azure OpenAI integration via Agent Service
   - Bootstrap 5 for responsive UI
 
 ### Agent System
 1. **SOP RAG Agent** (`Agents/SopRagAgent.cs`):
-   - Uses Azure AI Agent Service via `AgentsClient`
-   - Checks for existing "SOP Expert Agent" in Azure AI Foundry
-   - Reuses existing agents or creates new ones
+   - Uses Azure AI Agent Service via `PersistentAgentsClient`
+   - Checks for existing "SOP Expert Agent" in Azure AI Foundry by listing agents
+   - Reuses existing agents or creates new ones (persistent across restarts)
    - Specialized system prompt for Standard Operating Procedures expertise
-   - Thread-based conversation management
+   - Includes Azure AI Search integration for RAG capabilities
+   - Thread-based conversation management with full history
    - Returns structured, clear responses
 
 2. **Policy RAG Agent** (`Agents/PolicyRagAgent.cs`):
-   - Uses Azure AI Agent Service via `AgentsClient`
-   - Checks for existing "Policy Expert Agent" in Azure AI Foundry
-   - Reuses existing agents or creates new ones
+   - Uses Azure AI Agent Service via `PersistentAgentsClient`
+   - Checks for existing "Policy Expert Agent" in Azure AI Foundry by listing agents
+   - Reuses existing agents or creates new ones (persistent across restarts)
    - Specialized system prompt for Policy and compliance expertise
-   - Thread-based conversation management
+   - Includes Azure AI Search integration for RAG capabilities
+   - Thread-based conversation management with full history
    - Provides authoritative, citation-ready responses
 
 3. **Orchestrator Service** (`Services/OrchestratorService.cs`):
-   - Routes user queries to both agents simultaneously
-   - Executes queries in parallel for optimal performance
+   - Itself an agent using `PersistentAgentsClient`
+   - Uses function calling to route queries to specialized agents
+   - Routes user queries to both SOP and Policy agents
+   - Executes queries via agent function calls
    - Returns aggregated results from both agents
+   - Demonstrates advanced agent-to-agent communication
 
 ### User Interface
 - **Home Page** (`Components/Pages/Home.razor`):
@@ -52,7 +59,10 @@ Successfully implemented a complete .NET Blazor web application with dual RAG ag
 ### Configuration System
 - Supports both appsettings.json and environment variables
 - Flexible configuration for local development and cloud deployment
-- Secure API key management via environment variables or Azure Key Vault
+- **Entra ID authentication** via DefaultAzureCredential (preferred)
+- API key fallback for testing scenarios
+- Pre-configured agent IDs for reusing existing agents
+- Secure credential management via Azure CLI, Managed Identity, or environment variables
 
 ### Containerization
 1. **Dockerfile**:
@@ -94,36 +104,40 @@ Successfully implemented a complete .NET Blazor web application with dual RAG ag
 ```
 User Interface (Blazor Server)
        ↓
-Orchestrator Service
+Orchestrator Service (Agent with Function Calling)
        ↓
    ┌───┴───┐
    ↓       ↓
 SOP Agent  Policy Agent
    └───┬───┘
        ↓
-AgentsClient (Azure.AI.Projects)
+PersistentAgentsClient (Azure.AI.Agents.Persistent v1.1.0)
+       ↓
+DefaultAzureCredential (Entra ID Auth)
        ↓
 Azure AI Foundry
-  (Agent Service + Azure OpenAI)
+  (Agent Service + Azure OpenAI + Azure AI Search)
 ```
 
 ## Key Features Implemented
 
-✅ Dual-agent system with specialized prompts
-✅ Agent reuse across application restarts (checks Azure AI Foundry)
-✅ Thread-based conversation management
-✅ Parallel query execution via orchestrator
+✅ Dual-agent system with specialized prompts and Azure AI Search RAG
+✅ Agent persistence in Azure AI Foundry (reuse across restarts)
+✅ PersistentAgentsClient for true agent lifecycle management
+✅ Thread-based conversation management with full history
+✅ Orchestrator agent with function calling for routing
 ✅ Real-time interactive chat UI with two response panels
 ✅ User input box with keyboard support
 ✅ Message history with timestamps
 ✅ Responsive Bootstrap-based design
-✅ Configuration via connection string, appsettings.json, or environment variables
+✅ **Entra ID authentication** via DefaultAzureCredential (keyless!)
+✅ API key fallback for testing scenarios
+✅ Configuration via appsettings.json or environment variables
 ✅ Docker containerization with multi-stage build
 ✅ docker-compose for local development
-✅ Azure Container Apps deployment support
-✅ Managed Identity support for secure Azure access
-✅ Comprehensive documentation including migration guide
-✅ Production-ready error handling
+✅ Azure Container Apps deployment support with Managed Identity
+✅ Comprehensive documentation including authentication and migration guides
+✅ Production-ready error handling and logging
 
 ## Configuration Options
 
@@ -209,14 +223,16 @@ Potential improvements that could be added:
 
 ## Technical Decisions
 
-### Why Azure AI Agent Service?
+### Why Azure AI Agent Service with PersistentAgentsClient?
 - Official Microsoft agentic framework from Azure AI Foundry
-- True agent lifecycle management with persistence
-- Thread-based conversations with state management
-- Built-in support for RAG, function calling, and tools
-- Agent reuse prevents duplicate resource creation
+- True agent lifecycle management with persistent storage in the cloud
+- Thread-based conversations with state management and history
+- Built-in support for RAG via Azure AI Search, function calling, and tools
+- Agent reuse prevents duplicate resource creation (list and reuse existing agents)
 - Cloud-native scalability and reliability
+- Secure authentication via Entra ID (DefaultAzureCredential)
 - Active development and enterprise support
+- v1.1.0 brings enhanced persistence and agent management capabilities
 
 ### Why Blazor Server?
 - Real-time communication built-in
