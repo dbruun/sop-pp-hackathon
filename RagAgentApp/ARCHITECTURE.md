@@ -127,26 +127,30 @@ public interface IAgentService
 
 ### Infrastructure Layer
 
-#### Azure.AI.Projects SDK
-- **Purpose**: Azure AI Agent Service client
-- **Key Component**: `AgentsClient`
+#### Azure.AI.Agents.Persistent SDK (v1.1.0)
+- **Purpose**: Azure AI Agent Service client with persistent agent management
+- **Key Component**: `PersistentAgentsClient`
 - **Services**:
-  - Agent creation and management
-  - Thread-based conversations
+  - Agent creation and management in Azure AI Foundry
+  - Agent listing and reuse across restarts
+  - Thread-based conversations with persistent state
   - Run orchestration and polling
   - Message management
-- **Configuration**: Connection string or endpoint + API key
-- **Authentication**: API key or Managed Identity
+  - Function calling and tool integration
+- **Configuration**: Project endpoint + authentication
+- **Authentication**: DefaultAzureCredential (Entra ID) - recommended, API key fallback
 
 #### Azure AI Foundry
 - **Agent Service**: Manages agent lifecycle in the cloud
-- **Models Supported**: GPT-4, GPT-3.5-Turbo, GPT-4o
+- **Models Supported**: GPT-4, GPT-3.5-Turbo, GPT-4o, GPT-4o-mini
 - **Features**:
-  - Persistent agent storage
-  - Thread-based conversations
-  - Built-in RAG capabilities
-  - Function calling support
-- **Authentication**: Connection string, API key, or Managed Identity
+  - Persistent agent storage with unique IDs
+  - Thread-based conversations with full history
+  - Built-in RAG capabilities via Azure AI Search
+  - Function calling support for tool integration
+  - File search and code interpreter tools
+  - Multi-turn conversation management
+- **Authentication**: Entra ID (DefaultAzureCredential), API key fallback
 
 ## Data Flow
 
@@ -189,13 +193,17 @@ Startup
   ↓
 Program.cs reads configuration
   ↓
-  ├─ appsettings.json (development)
-  ├─ appsettings.Development.json (override)
-  └─ Environment Variables (production)
+  ├─ appsettings.json (base settings)
+  ├─ appsettings.Development.json (local override)
+  └─ Environment Variables (container/production)
   ↓
 AzureAISettings populated
   ↓
-Semantic Kernel configured
+PersistentAgentsClient configured with DefaultAzureCredential
+  ↓
+Agent services registered as singletons
+  ↓
+OrchestratorService configured with function calling
   ↓
 Services registered in DI container
   ↓
@@ -399,14 +407,16 @@ Operations Team
 - No separate API layer needed
 - Excellent tooling
 
-### Why Azure AI Agent Service?
-- Official Microsoft agentic framework
-- Native Azure AI Foundry integration
-- Persistent agent lifecycle management
-- Thread-based conversation management
-- Built-in RAG and tool support
-- Agent reuse across application restarts
-- Scalable cloud-based execution
+### Why Azure AI Agent Service with PersistentAgentsClient?
+- Official Microsoft agentic framework with persistent state
+- Native Azure AI Foundry integration for agent storage
+- True agent lifecycle management (create, list, update, delete)
+- Thread-based conversation management with full history
+- Built-in RAG support via Azure AI Search integration
+- Function calling for tool integration and orchestration
+- Agent reuse across application restarts (no duplicate creation)
+- Scalable cloud-based execution with enterprise support
+- Secure authentication via Entra ID (DefaultAzureCredential)
 
 ### Why Container Apps?
 - Serverless containers

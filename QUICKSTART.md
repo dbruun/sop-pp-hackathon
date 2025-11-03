@@ -21,30 +21,39 @@ Choose your preferred method:
 - ✅ Docker Desktop ([Download](https://www.docker.com/products/docker-desktop))
 - ✅ Azure OpenAI access with API key
 
-## Step 1: Choose Your Authentication Method
+## Step 1: Setup Authentication (Recommended: Entra ID)
 
-### Option A: Entra ID (Recommended - No keys needed!)
+### Option A: Entra ID (Recommended - No keys needed! 🎉)
 
 1. Install Azure CLI:
-   ```powershell
+   ```bash
+   # Windows
    winget install Microsoft.AzureCLI
+   
+   # macOS
+   brew install azure-cli
+   
+   # Linux
+   curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
    ```
 
 2. Login to Azure:
-   ```powershell
+   ```bash
    az login
    ```
 
-3. You're done! The app will use your Azure credentials automatically.
+3. You're done! The app will use your Azure credentials automatically via `DefaultAzureCredential`.
 
-### Option B: API Key (For Testing)
+### Option B: API Key (For Testing Only - Not Recommended)
 
 1. Go to [Azure AI Foundry](https://ai.azure.com)
 2. Navigate to your Azure AI project
 3. Go to **Settings** → **Keys and Endpoint**
 4. Copy your API key
 
-## Step 1b: Get Azure AI Foundry Project Details
+⚠️ **Note:** API keys should only be used for testing. Production deployments should use Entra ID.
+
+## Step 2: Get Azure AI Foundry Project Details
 
 You need an Azure AI Foundry project with a deployed model:
 
@@ -54,8 +63,9 @@ You need an Azure AI Foundry project with a deployed model:
 4. Copy these values:
    - **Project Endpoint**: `https://your-foundry.services.ai.azure.com/api/projects/YourProject`
    - **Model Name**: Your deployment name (e.g., "gpt-4")
+5. Ensure your Azure identity has "Azure AI Developer" role on the project
 
-## Step 2: Clone and Configure
+## Step 3: Clone and Configure
 
 ```bash
 # Clone the repository
@@ -69,20 +79,23 @@ cp .env.example .env
 nano .env  # or use your favorite editor
 ```
 
-Your `.env` should look like (Option 1 - Connection String):
+Your `.env` should look like:
+
+**Option 1 - Entra ID (Recommended):**
 ```bash
-AZURE_AI_CONNECTION_STRING=your-connection-string-here
+AZURE_AI_PROJECT_ENDPOINT=https://your-foundry.services.ai.azure.com/api/projects/YourProject
 AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
+# No API key needed! Just run 'az login' before starting the app
 ```
 
-Or (Option 2 - Endpoint and Key):
+**Option 2 - API Key (Testing Only):**
 ```bash
-AZURE_AI_PROJECT_ENDPOINT=https://your-project.cognitiveservices.azure.com/
+AZURE_AI_PROJECT_ENDPOINT=https://your-foundry.services.ai.azure.com/api/projects/YourProject
 AZURE_AI_API_KEY=your-api-key-here
 AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
 ```
 
-## Step 3: Run the Application
+## Step 4: Run the Application
 
 ### Option A: Using .NET CLI (Recommended for Development)
 
@@ -108,7 +121,7 @@ docker-compose up
 
 Open your browser to: **http://localhost:8080**
 
-## Step 4: Test the Agents
+## Step 5: Test the Agents
 
 1. Click on **"Start Chatting"** or go to `/chat`
 2. Type a question like: **"What are the key components of a good SOP?"**
@@ -136,9 +149,14 @@ Open your browser to: **http://localhost:8080**
 
 ## Troubleshooting
 
+### "DefaultAzureCredential failed to retrieve a token"
+- ✅ Run `az login` to authenticate
+- ✅ Verify you're logged into the correct subscription: `az account show`
+- ✅ Ensure your identity has "Azure AI Developer" role on the project
+
 ### "Cannot connect to Azure AI Foundry"
-- ✅ Check your connection string or endpoint URL is correct
-- ✅ Verify API key is correct (if not using connection string)
+- ✅ Check your endpoint URL is correct
+- ✅ Verify API key is correct (if using API key)
 - ✅ Ensure model is deployed in Azure AI Foundry
 - ✅ Verify agent service is enabled in your project
 

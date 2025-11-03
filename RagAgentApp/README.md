@@ -29,20 +29,23 @@ The application uses a clean architecture with:
 ## Prerequisites
 
 - .NET 9.0 SDK
-- Docker (for containerized deployment)
+- Azure CLI (for Entra ID authentication): `az login`
+- Docker (optional, for containerized deployment)
 - Azure AI Foundry project with:
   - A deployed GPT model (e.g., gpt-4, gpt-35-turbo, gpt-4o)
-  - Project connection string OR endpoint and API key
+  - Project endpoint
   - Agent service enabled
+  - Azure AI Developer role assigned to your identity
 
 ## Configuration
 
 ### Authentication
 
-This application supports two authentication methods:
+This application uses **Entra ID authentication** by default via `DefaultAzureCredential`:
 
-1. **Entra ID (Recommended for Production)** - Uses Azure CLI, Managed Identity, or Service Principal
-2. **API Key (Development/Testing)** - Uses API key authentication
+1. **Local Development**: Use Azure CLI - just run `az login`
+2. **Azure Deployment**: Enable Managed Identity on your Azure resource
+3. **CI/CD**: Use Service Principal with environment variables
 
 📖 **See [AUTHENTICATION.md](AUTHENTICATION.md) for detailed authentication setup**
 
@@ -50,7 +53,7 @@ This application supports two authentication methods:
 
 1. Clone the repository
 2. Login to Azure CLI:
-   ```powershell
+   ```bash
    az login
    ```
 3. Configure `appsettings.Development.json`:
@@ -58,7 +61,9 @@ This application supports two authentication methods:
    {
      "AzureAI": {
        "ProjectEndpoint": "https://your-foundry.services.ai.azure.com/api/projects/YourProject",
-       "ModelDeploymentName": "gpt-4"
+       "ModelDeploymentName": "gpt-4",
+       "SopAgentId": "",
+       "PolicyAgentId": ""
      }
    }
    ```
@@ -66,7 +71,7 @@ This application supports two authentication methods:
 
 ### Alternative: API Key for Testing
 
-If you prefer using an API key for local testing:
+If you need to use an API key for testing (not recommended for production):
 
 ```json
 {
@@ -85,14 +90,24 @@ If you prefer using an API key for local testing:
 For container deployments and CI/CD:
 
 **Entra ID (Recommended):**
-- `AZURE_AI_PROJECT_ENDPOINT`: Your Azure AI Foundry project endpoint
-- `AZURE_AI_MODEL_DEPLOYMENT_NAME`: Your deployed model name
-- `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET`: Service principal credentials (optional)
+```bash
+AZURE_AI_PROJECT_ENDPOINT=https://your-foundry.services.ai.azure.com/api/projects/YourProject
+AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
+# Optional: Pre-created agent IDs
+AZURE_AI_SOP_AGENT_ID=asst_xxx
+AZURE_AI_POLICY_AGENT_ID=asst_yyy
+# Optional: Service principal credentials (for CI/CD)
+AZURE_CLIENT_ID=your-client-id
+AZURE_TENANT_ID=your-tenant-id
+AZURE_CLIENT_SECRET=your-client-secret
+```
 
-**API Key (Not recommended for production):**
-- `AZURE_AI_PROJECT_ENDPOINT`: Your Azure AI Foundry project endpoint
-- `AZURE_AI_API_KEY`: Your API key
-- `AZURE_AI_MODEL_DEPLOYMENT_NAME`: Your deployed model name
+**API Key (For testing only - not recommended for production):**
+```bash
+AZURE_AI_PROJECT_ENDPOINT=https://your-foundry.services.ai.azure.com/api/projects/YourProject
+AZURE_AI_API_KEY=your-api-key
+AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
+```
 
 ## Running Locally
 
@@ -128,7 +143,15 @@ cd RagAgentApp
 # Build the image
 docker build -t ragagentapp .
 
-# Run the container
+# Run the container with Entra ID (recommended)
+# Mount Azure CLI credentials from host
+docker run -p 8080:8080 \
+  -v ~/.azure:/root/.azure:ro \
+  -e AZURE_AI_PROJECT_ENDPOINT="your-endpoint" \
+  -e AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4" \
+  ragagentapp
+
+# OR run with API key (testing only)
 docker run -p 8080:8080 \
   -e AZURE_AI_PROJECT_ENDPOINT="your-endpoint" \
   -e AZURE_AI_API_KEY="your-key" \
@@ -138,81 +161,61 @@ docker run -p 8080:8080 \
 
 ## Deploying to Azure Container Apps
 
-### Prerequisites
-- Azure CLI installed
-- Azure subscription
-- Resource group created
+📖 **See [DEPLOYMENT.md](DEPLOYMENT.md) for comprehensive deployment guide**
 
-### Step 1: Create Azure Container Registry (ACR)
+### Quick Deployment with Managed Identity (Recommended)
 
 ```bash
 # Set variables
-RESOURCE_GROUP="your-resource-group"
-ACR_NAME="your-acr-name"
+RESOURCE_GROUP="rg-ragagent"
+ACR_NAME="acrragagent"
 LOCATION="eastus"
+APP_NAME="ragagentapp"
 
 # Create ACR
 az acr create --resource-group $RESOURCE_GROUP \
-  --name $ACR_NAME \
-  --sku Basic \
-  --location $LOCATION
-```
-
-### Step 2: Build and Push Docker Image
-
-```bash
-# Log in to ACR
-az acr login --name $ACR_NAME
+  --name $ACR_NAME --sku Basic --location $LOCATION
 
 # Build and push image
-cd RagAgentApp
 az acr build --registry $ACR_NAME \
-  --image ragagentapp:latest \
-  --file Dockerfile .
-```
+  --image ragagentapp:latest --file Dockerfile .
 
-### Step 3: Create Container App Environment
-
-```bash
-CONTAINERAPPS_ENVIRONMENT="your-env-name"
-
+# Create Container App Environment
 az containerapp env create \
-  --name $CONTAINERAPPS_ENVIRONMENT \
+  --name env-ragagent \
   --resource-group $RESOURCE_GROUP \
   --location $LOCATION
-```
 
-### Step 4: Deploy Container App
-
-```bash
-APP_NAME="ragagentapp"
-
+# Deploy with Managed Identity (No API key needed!)
 az containerapp create \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
-  --environment $CONTAINERAPPS_ENVIRONMENT \
+  --environment env-ragagent \
   --image $ACR_NAME.azurecr.io/ragagentapp:latest \
   --registry-server $ACR_NAME.azurecr.io \
   --target-port 8080 \
   --ingress external \
-  --secrets \
-    azure-ai-api-key="your-api-key" \
   --env-vars \
+    ASPNETCORE_ENVIRONMENT=Production \
     AZURE_AI_PROJECT_ENDPOINT="your-endpoint" \
-    AZURE_AI_API_KEY=secretref:azure-ai-api-key \
     AZURE_AI_MODEL_DEPLOYMENT_NAME="gpt-4" \
-  --cpu 1.0 \
-  --memory 2.0Gi
-```
+  --cpu 1.0 --memory 2.0Gi
 
-### Step 5: Get the App URL
-
-```bash
-az containerapp show \
+# Enable Managed Identity
+az containerapp identity assign \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
-  --query properties.configuration.ingress.fqdn \
-  --output tsv
+  --system-assigned
+
+# Grant access to Azure AI Foundry (replace with your project resource ID)
+PRINCIPAL_ID=$(az containerapp identity show \
+  --name $APP_NAME --resource-group $RESOURCE_GROUP \
+  --query principalId --output tsv)
+
+az role assignment create \
+  --assignee $PRINCIPAL_ID \
+  --role "Azure AI Developer" \
+  --scope "/subscriptions/<sub-id>/resourceGroups/<ai-rg>/providers/Microsoft.MachineLearningServices/workspaces/<ai-project>"
 ```
 
 ## Usage

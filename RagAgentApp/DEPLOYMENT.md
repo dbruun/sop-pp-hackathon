@@ -30,14 +30,16 @@ ACR_NAME="acrragagent$(openssl rand -hex 3)"  # Must be globally unique
 CONTAINERAPPS_ENV="env-ragagent"
 APP_NAME="ragagentapp"
 
-# Azure AI Foundry configuration (Option 1: Connection String - Recommended)
-AZURE_AI_CONNECTION_STRING="your-connection-string-here"
+# Azure AI Foundry configuration (Recommended: Use Managed Identity - no keys!)
+AZURE_AI_ENDPOINT="https://your-foundry.services.ai.azure.com/api/projects/YourProject"
 MODEL_DEPLOYMENT="gpt-4"  # or gpt-35-turbo, gpt-4o, etc.
 
-# OR (Option 2: Endpoint + Key)
-AZURE_AI_ENDPOINT="https://your-project.cognitiveservices.azure.com/"
-AZURE_AI_KEY="your-api-key-here"
-MODEL_DEPLOYMENT="gpt-4"  # or gpt-35-turbo, gpt-4o, etc.
+# Optional: Pre-created agent IDs (recommended)
+SOP_AGENT_ID="asst_xxx"
+POLICY_AGENT_ID="asst_yyy"
+
+# Optional: For testing with API key (not recommended for production)
+# AZURE_AI_KEY="your-api-key-here"
 ```
 
 ### 3. Create Resource Group
@@ -115,7 +117,7 @@ ACR_PASSWORD=$(az acr credential show \
 
 ### 8. Deploy Container App
 
-**Option 1: Using Connection String (Recommended)**
+**Recommended: Using Managed Identity (Keyless Authentication)**
 
 ```bash
 az containerapp create \
@@ -128,11 +130,9 @@ az containerapp create \
   --registry-password $ACR_PASSWORD \
   --target-port 8080 \
   --ingress external \
-  --secrets \
-    azure-ai-connection-string="$AZURE_AI_CONNECTION_STRING" \
   --env-vars \
     ASPNETCORE_ENVIRONMENT=Production \
-    AZURE_AI_CONNECTION_STRING=secretref:azure-ai-connection-string \
+    AZURE_AI_PROJECT_ENDPOINT="$AZURE_AI_ENDPOINT" \
     AZURE_AI_MODEL_DEPLOYMENT_NAME="$MODEL_DEPLOYMENT" \
   --cpu 1.0 \
   --memory 2.0Gi \
@@ -140,7 +140,9 @@ az containerapp create \
   --max-replicas 3
 ```
 
-**Option 2: Using Endpoint + Key**
+**Note:** No API key needed! Continue to step "Using Managed Identity" below to grant access.
+
+**Alternative: Using API Key (For Testing Only)**
 
 ```bash
 az containerapp create \
@@ -302,9 +304,9 @@ az containerapp update \
     APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=$INSTRUMENTATION_KEY"
 ```
 
-## Using Managed Identity (More Secure)
+## Using Managed Identity (Recommended - Keyless)
 
-Instead of using API keys, you can configure managed identity:
+**This is the recommended approach for production deployments.**
 
 ### 1. Enable Managed Identity
 
@@ -323,30 +325,43 @@ PRINCIPAL_ID=$(az containerapp identity show \
   --resource-group $RESOURCE_GROUP \
   --query principalId \
   --output tsv)
+
+echo "Managed Identity Principal ID: $PRINCIPAL_ID"
 ```
 
 ### 3. Grant Access to Azure AI Foundry
 
 ```bash
 # Get your Azure AI Foundry project resource ID
-AI_PROJECT_RESOURCE_ID="/subscriptions/YOUR_SUBSCRIPTION_ID/resourceGroups/YOUR_AI_RG/providers/Microsoft.MachineLearningServices/workspaces/YOUR_AI_PROJECT"
+# Replace with your actual values
+SUBSCRIPTION_ID="your-subscription-id"
+AI_RG="your-ai-resource-group"
+AI_PROJECT="your-ai-project-name"
 
+AI_PROJECT_RESOURCE_ID="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$AI_RG/providers/Microsoft.MachineLearningServices/workspaces/$AI_PROJECT"
+
+# Grant "Azure AI Developer" role
 az role assignment create \
   --assignee $PRINCIPAL_ID \
   --role "Azure AI Developer" \
   --scope $AI_PROJECT_RESOURCE_ID
+
+echo "✅ Managed Identity configured successfully!"
 ```
 
-### 4. Update Container App to Use Managed Identity
+### 4. Verify Configuration
 
 ```bash
-az containerapp update \
+# Ensure no API key is set (for keyless authentication)
+az containerapp show \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
-  --remove-env-vars AZURE_AI_API_KEY
+  --query properties.configuration.secrets
+
+# Should not show azure-ai-api-key
 ```
 
-The application will automatically use managed identity when `AZURE_AI_API_KEY` is not provided.
+The application will automatically use `DefaultAzureCredential` which picks up the Managed Identity.
 
 ## Troubleshooting
 
@@ -383,12 +398,13 @@ az containerapp show \
 
 ### Azure AI Foundry connection issues
 
-- Verify connection string format is correct (if using connection string)
-- Verify endpoint URL is correct (if using endpoint + key)
-- Check API key is valid
+- Verify endpoint URL is correct (format: `https://your-foundry.services.ai.azure.com/api/projects/YourProject`)
+- If using Managed Identity: Ensure "Azure AI Developer" role is assigned
+- If using API key: Check API key is valid and not expired
 - Ensure model deployment name matches your Azure AI Foundry deployment
 - Verify agent service is enabled in your Azure AI project
 - Verify network connectivity from Container Apps to Azure AI Foundry
+- Check Container App logs for authentication errors
 
 ## Cost Optimization
 
