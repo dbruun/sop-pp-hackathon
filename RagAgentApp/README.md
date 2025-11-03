@@ -1,8 +1,31 @@
-# RAG Agent System
+# RAG Agent System - Hackathon Version
 
 A dual-agent AI system powered by Azure AI Agent Service and Azure AI Foundry for Standard Operating Procedures (SOP) and Policy information retrieval.
 
-## Features
+## 🎯 For Hackathon Participants
+
+**This is a stubbed-out learning version!** The UI is complete, but the agent logic needs to be implemented.
+
+📚 **See [../HACKATHON.md](../HACKATHON.md) for the complete implementation guide**
+
+## What's Included
+
+✅ **Complete UI**: Fully functional Blazor chat interface  
+✅ **Project Structure**: Proper separation of concerns and dependency injection  
+✅ **Stubbed Agents**: Ready for you to implement with helpful TODO comments  
+✅ **Documentation**: Comprehensive guides and inline comments  
+
+## Quick Start
+
+```bash
+# Run the stubbed version (no Azure setup needed yet)
+dotnet run
+
+# Navigate to http://localhost:5000
+# Click "Start Chatting" and try the placeholder responses
+```
+
+## Features (When Implemented)
 
 - **Dual Agent System**: Two specialized RAG agents working simultaneously
   - **SOP Agent**: Expert in Standard Operating Procedures, work instructions, and process documentation

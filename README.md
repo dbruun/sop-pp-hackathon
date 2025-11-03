@@ -2,12 +2,20 @@
 
 RAG Agent System for Standard Operating Procedures and Policy Management
 
+## 🎯 Hackathon Version
+
+**This is the hackathon-ready branch!** The agent implementations are stubbed out to provide a learning experience.
+
+👉 **Start here**: [HACKATHON.md](HACKATHON.md) - Complete guide for implementing the agents
+
 ## Overview
 
 This repository contains a .NET Blazor web application that implements a dual-agent RAG (Retrieval-Augmented Generation) system using Azure AI Agent Service and Azure AI Foundry. The application features two specialized AI agents that simultaneously answer user queries:
 
 - **SOP Agent**: Expert in Standard Operating Procedures, work instructions, and process documentation
 - **Policy Agent**: Expert in company policies, regulations, and compliance requirements
+
+**Current Status**: UI is fully functional, agent implementations are stubbed and ready for you to implement!
 
 ## Features
 

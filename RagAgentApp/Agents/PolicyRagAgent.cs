@@ -3,6 +3,21 @@ using Microsoft.Extensions.Logging;
 
 namespace RagAgentApp.Agents;
 
+/// <summary>
+/// HACKATHON TODO: This is a stubbed implementation of the Policy RAG Agent.
+/// Your task is to implement the Azure AI Agent Service integration to make this agent
+/// query an Azure AI Search index containing company policies and regulations.
+/// 
+/// Steps to implement:
+/// 1. Azure.AI.Agents.Persistent NuGet package is already included
+/// 2. PersistentAgentsClient is already injected in the constructor
+/// 3. Implement GetOrResolveAgentId() to create or retrieve an agent in Azure AI Foundry
+/// 4. Add file search tool to connect to your Policy index
+/// 5. Implement ProcessQueryAsync to send queries to the agent
+/// 6. Handle the agent's responses
+/// 
+/// This agent should be similar to SopRagAgent but query a different knowledge base.
+/// </summary>
 public class PolicyRagAgent : IAgentService
 {
     private readonly PersistentAgentsClient _agentsClient;
@@ -21,143 +36,88 @@ public class PolicyRagAgent : IAgentService
         _agentId = agentId;
         _logger = logger;
         
-        _logger.LogInformation("PolicyRagAgent initialized with model: {ModelName}, AgentId: {AgentId}", 
-            modelDeploymentName, agentId ?? "not provided");
+        _logger.LogInformation("PolicyRagAgent initialized (HACKATHON STUB - implement GetOrResolveAgentId and ProcessQueryAsync)");
     }
 
+    /// <summary>
+    /// HACKATHON TODO: Implement this method to get or create your agent in Azure AI Foundry.
+    /// 
+    /// Steps:
+    /// 1. Check if _agentIdResolved is already cached, return it if so
+    /// 2. If _agentId is provided, use it directly
+    /// 3. Otherwise, search for existing agent by name using _agentsClient.Administration.GetAgents()
+    /// 4. If found, cache and return the ID
+    /// 5. If not found, create a new agent with _agentsClient.Administration.CreateAgent()
+    /// 6. Cache and return the new agent ID
+    /// </summary>
     private string GetOrResolveAgentId()
     {
-        if (_agentIdResolved != null)
-        {
-            _logger.LogDebug("Using cached agent ID: {AgentId}", _agentIdResolved);
-            return _agentIdResolved;
-        }
-
-        if (!string.IsNullOrEmpty(_agentId))
-        {
-            _agentIdResolved = _agentId;
-            _logger.LogInformation("Using provided agent ID: {AgentId}", _agentIdResolved);
-            return _agentIdResolved;
-        }
-
-        var systemPrompt = @"You are a Policy expert assistant. Your role is to help users 
-understand company policies, regulations, compliance requirements, and governance frameworks.  You should ALWAYS use your azure ai search index to generate your response 
-Provide clear, authoritative responses based on policy knowledge. When discussing policies, 
-cite relevant sections and explain implications. If you don't have specific policy information, 
-acknowledge that and provide general policy guidance.";
-
-        const string agentName = "Policy Expert Agent";
-
-        _logger.LogInformation("Searching for existing agent with name: {AgentName}", agentName);
-
-        var existingAgentsResponse = _agentsClient.Administration.GetAgents();
-        var existingAgent = existingAgentsResponse
-            .FirstOrDefault(a => a.Name == agentName);
-
-        if (existingAgent != null)
-        {
-            _agentIdResolved = existingAgent.Id;
-            _logger.LogInformation("Found existing agent: {AgentId} with name: {AgentName}", _agentIdResolved, agentName);
-        }
-        else
-        {
-            _logger.LogInformation("Creating new agent with name: {AgentName}, model: {ModelName}", agentName, _modelDeploymentName);
-            
-            var newAgent = _agentsClient.Administration.CreateAgent(
-                model: _modelDeploymentName,
-                name: agentName,
-                instructions: systemPrompt
-            );
-            _agentIdResolved = newAgent.Value.Id;
-            _logger.LogInformation("Successfully created new agent: {AgentId}", _agentIdResolved);
-        }
-
-        return _agentIdResolved;
+        // TODO: Implement agent resolution/creation logic here
+        // This should be similar to SopRagAgent but with different agent name and instructions
+        _logger.LogWarning("GetOrResolveAgentId not implemented - using stub");
+        return "stub-agent-id";
     }
 
+    /// <summary>
+    /// HACKATHON TODO: Implement this method to query your Azure AI Agent.
+    /// 
+    /// Current behavior: Returns a placeholder response.
+    /// 
+    /// Steps to implement:
+    /// 1. Call GetOrResolveAgentId() to get the agent ID
+    /// 2. Create or reuse a thread for the conversation (_threadId)
+    /// 3. Add the user's query as a message to the thread
+    /// 4. Create a run with your agent ID
+    /// 5. Poll for the run completion (check run.Status)
+    /// 6. Retrieve messages and return the agent's response
+    /// 
+    /// Use the _agentsClient methods:
+    /// - _agentsClient.Threads.CreateThread()
+    /// - _agentsClient.Messages.CreateMessage()
+    /// - _agentsClient.Runs.CreateRun()
+    /// - _agentsClient.Runs.GetRun()
+    /// - _agentsClient.Messages.GetMessages()
+    /// </summary>
     public async Task<string> ProcessQueryAsync(string query, CancellationToken cancellationToken = default)
     {
         try
         {
-            _logger.LogInformation("Processing Policy query: {Query}", query.Length > 100 ? query.Substring(0, 100) + "..." : query);
-            
-            var agentId = GetOrResolveAgentId();
+            _logger.LogInformation("Processing Policy query (STUB): {Query}", 
+                query.Length > 100 ? query.Substring(0, 100) + "..." : query);
 
-            // Create thread only once and reuse it
-            if (string.IsNullOrEmpty(_threadId))
-            {
-                _logger.LogDebug("Creating new thread for conversation");
-                var threadResponse = _agentsClient.Threads.CreateThread(cancellationToken: cancellationToken);
-                _threadId = threadResponse.Value.Id;
-                _logger.LogInformation("Created thread: {ThreadId}", _threadId);
-            }
-            else
-            {
-                _logger.LogDebug("Reusing existing thread: {ThreadId}", _threadId);
-            }
+            // TODO: Implement the actual Azure AI Agent Service call
+            // 1. Get agent ID: var agentId = GetOrResolveAgentId();
+            // 2. Create/reuse thread: if (string.IsNullOrEmpty(_threadId)) { ... }
+            // 3. Add message: _agentsClient.Messages.CreateMessage(_threadId, MessageRole.User, query, cancellationToken: cancellationToken);
+            // 4. Create run: var runResponse = _agentsClient.Runs.CreateRun(_threadId, agentId, cancellationToken: cancellationToken);
+            // 5. Poll until complete: while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress) { ... }
+            // 6. Get messages and return response
 
-            _logger.LogDebug("Adding user message to thread: {ThreadId}", _threadId);
-            _agentsClient.Messages.CreateMessage(
-                _threadId,
-                MessageRole.User,
-                query,
-                cancellationToken: cancellationToken
-            );
+            // Simulate some processing time
+            await Task.Delay(500, cancellationToken);
 
-            _logger.LogInformation("Starting agent run for agent: {AgentId} on thread: {ThreadId}", agentId, _threadId);
-            var runResponse = _agentsClient.Runs.CreateRun(
-                _threadId,
-                agentId,
-                cancellationToken: cancellationToken
-            );
+            // Temporary stub response
+            var stubResponse = @"📋 STUBBED RESPONSE - Policy Agent
 
-            var run = runResponse.Value;
-            _logger.LogInformation("Run created: {RunId} with status: {Status}", run.Id, run.Status);
+This is a placeholder response. To make this work:
 
-            var pollCount = 0;
-            do
-            {
-                await Task.Delay(1000, cancellationToken);
-                var runStatusResponse = _agentsClient.Runs.GetRun(_threadId, run.Id, cancellationToken);
-                run = runStatusResponse.Value;
-                pollCount++;
-                
-                if (pollCount % 5 == 0) // Log every 5 seconds
-                {
-                    _logger.LogDebug("Run {RunId} status: {Status} (polled {Count} times)", run.Id, run.Status, pollCount);
-                }
-            } while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress);
+1. Implement GetOrResolveAgentId() to create/find your agent
+2. Uncomment the Azure AI setup in Program.cs
+3. Configure appsettings.Development.json with your Azure AI endpoint
+4. Implement the TODO steps above in ProcessQueryAsync
+5. Test with your Azure AI Foundry agent
 
-            _logger.LogInformation("Run {RunId} completed with status: {Status}", run.Id, run.Status);
+Your query was: " + query + @"
 
-            if (run.Status == RunStatus.Failed)
-            {
-                _logger.LogError("Run failed with error: {Error}", run.LastError?.Message ?? "Unknown error");
-                return $"The agent run failed: {run.LastError?.Message ?? "Unknown error"}";
-            }
+Next steps:
+- Create or get agent in Azure AI Foundry
+- Create thread for conversation
+- Add user message to thread
+- Run agent and poll for completion
+- Retrieve and return agent response";
 
-            _logger.LogDebug("Retrieving messages from thread: {ThreadId}", _threadId);
-            var messagesResponse = _agentsClient.Messages.GetMessages(
-                _threadId,
-                cancellationToken: cancellationToken
-            );
-
-            var messageCount = messagesResponse.Count();
-            _logger.LogDebug("Retrieved {MessageCount} messages from thread", messageCount);
-
-            var lastMessage = messagesResponse
-                .Where(m => m.Role != MessageRole.User)
-                .OrderByDescending(m => m.CreatedAt)
-                .FirstOrDefault();
-
-            if (lastMessage?.ContentItems?.FirstOrDefault() is MessageTextContent textContent)
-            {
-                _logger.LogInformation("Successfully generated response (length: {Length} characters)", textContent.Text.Length);
-                return textContent.Text;
-            }
-
-            _logger.LogWarning("No assistant message found in thread: {ThreadId}", _threadId);
-            return "I apologize, but I couldn't generate a response at this time.";
+            _logger.LogInformation("Returning stub response for Policy query");
+            return stubResponse;
         }
         catch (Exception ex)
         {

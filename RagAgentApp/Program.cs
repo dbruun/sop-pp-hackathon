@@ -14,6 +14,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 // Configure Azure AI settings
+// HACKATHON TODO: Update appsettings.Development.json with your Azure AI Foundry details
 var azureAISettings = builder.Configuration.GetSection("AzureAI").Get<AzureAISettings>() 
     ?? new AzureAISettings();
 
@@ -26,12 +27,13 @@ azureAISettings.PolicyAgentId = builder.Configuration["AZURE_AI_POLICY_AGENT_ID"
 azureAISettings.ApiKey = builder.Configuration["AZURE_AI_API_KEY"] ?? azureAISettings.ApiKey;
 
 // Register PersistentAgentsClient (v1.1.0 API with Azure.AI.Agents.Persistent)
+// HACKATHON TODO: Ensure you have Azure AI Foundry project endpoint configured
 builder.Services.AddSingleton<PersistentAgentsClient>(sp =>
 {
     if (string.IsNullOrEmpty(azureAISettings.ProjectEndpoint))
     {
         throw new InvalidOperationException(
-            "Azure AI configuration is missing. Please provide AZURE_AI_PROJECT_ENDPOINT.");
+            "Azure AI configuration is missing. Please provide AZURE_AI_PROJECT_ENDPOINT in appsettings.Development.json or environment variables.");
     }
     
     // Create PersistentAgentsClient with endpoint + DefaultAzureCredential
@@ -48,6 +50,7 @@ builder.Services.AddSingleton<SopRagAgent>(sp =>
     var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
     var settings = sp.GetRequiredService<AzureAISettings>();
     var logger = sp.GetRequiredService<ILogger<SopRagAgent>>();
+    // HACKATHON TODO: Implement GetOrResolveAgentId() and ProcessQueryAsync() in SopRagAgent.cs
     return new SopRagAgent(agentsClient, settings.ModelDeploymentName, logger, settings.SopAgentId);
 });
 
@@ -56,6 +59,7 @@ builder.Services.AddSingleton<PolicyRagAgent>(sp =>
     var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
     var settings = sp.GetRequiredService<AzureAISettings>();
     var logger = sp.GetRequiredService<ILogger<PolicyRagAgent>>();
+    // HACKATHON TODO: Implement GetOrResolveAgentId() and ProcessQueryAsync() in PolicyRagAgent.cs
     return new PolicyRagAgent(agentsClient, settings.ModelDeploymentName, logger, settings.PolicyAgentId);
 });
 
@@ -67,6 +71,7 @@ builder.Services.AddSingleton<OrchestratorService>(sp =>
     var sopAgent = sp.GetRequiredService<SopRagAgent>();
     var policyAgent = sp.GetRequiredService<PolicyRagAgent>();
     var logger = sp.GetRequiredService<ILogger<OrchestratorService>>();
+    // HACKATHON TODO: The simple orchestration is already implemented. For advanced, implement GetOrResolveOrchestratorAgentId()
     return new OrchestratorService(agentsClient, settings.ModelDeploymentName, sopAgent, policyAgent, logger);
 });
 
