@@ -85,7 +85,7 @@ In `appsettings.json` or `appsettings.Development.json`:
 ```json
 {
   "AzureAI": {
-    "ProjectEndpoint": "https://derekazurefoundry.services.ai.azure.com/api/projects/DerekAzureFoundry",
+    "ProjectEndpoint": "https://your-foundry.services.ai.azure.com/api/projects/YourProject",
     "ModelDeploymentName": "gpt-4",
     "SopAgentId": "",
     "PolicyAgentId": ""
@@ -93,7 +93,7 @@ In `appsettings.json` or `appsettings.Development.json`:
 }
 ```
 
-**Note**: No `ApiKey` field needed!
+**Note**: No `ApiKey` field needed! The application will automatically use `DefaultAzureCredential` for authentication.
 
 ### How DefaultAzureCredential Works
 

@@ -165,14 +165,14 @@ Create this file with:
     }
   },
   "AzureAI": {
-    "ProjectEndpoint": "https://YOUR-FOUNDRY.services.ai.azure.com/api/projects/YOUR-PROJECT",
+    "ProjectEndpoint": "https://your-foundry.services.ai.azure.com/api/projects/YourProject",
     "ModelDeploymentName": "gpt-4"
   }
 }
 ```
 
 ### Authentication
-Run: `az login` (uses Azure CLI credentials automatically)
+Run: `az login` (uses Azure CLI credentials automatically via `DefaultAzureCredential`)
 
 ## 🧪 Testing Your Implementation
 

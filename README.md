@@ -87,8 +87,9 @@ See the [RagAgentApp/README.md](RagAgentApp/README.md) for detailed setup and us
 2. **Configuration**:
    ```bash
    cd RagAgentApp
-   cp .env.example .env
-   # Edit .env with your Azure OpenAI credentials
+   # Login to Azure for authentication
+   az login
+   # Configure appsettings.Development.json with your Azure AI Foundry endpoint
    ```
 
 3. **Run Locally**:

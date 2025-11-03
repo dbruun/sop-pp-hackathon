@@ -52,7 +52,9 @@ Successfully implemented a complete .NET Blazor web application with dual RAG ag
 ### Configuration System
 - Supports both appsettings.json and environment variables
 - Flexible configuration for local development and cloud deployment
-- Secure API key management via environment variables or Azure Key Vault
+- Primary authentication via DefaultAzureCredential (Azure CLI, Managed Identity, etc.)
+- Optional API key support for testing (not recommended for production)
+- Secure credential management via Azure Key Vault in production
 
 ### Containerization
 1. **Dockerfile**:
@@ -117,7 +119,8 @@ Azure AI Foundry
 ✅ User input box with keyboard support
 ✅ Message history with timestamps
 ✅ Responsive Bootstrap-based design
-✅ Configuration via connection string, appsettings.json, or environment variables
+✅ Configuration via appsettings.json or environment variables
+✅ DefaultAzureCredential for secure, keyless authentication
 ✅ Docker containerization with multi-stage build
 ✅ docker-compose for local development
 ✅ Azure Container Apps deployment support
@@ -128,18 +131,22 @@ Azure AI Foundry
 ## Configuration Options
 
 ### Local Development
-- Edit `appsettings.Development.json`
+- Login with `az login` for authentication
+- Edit `appsettings.Development.json` with project endpoint
 - Use `dotnet run` to start
+- Application automatically uses Azure CLI credentials
 
 ### Docker Development
 - Copy `.env.example` to `.env`
-- Fill in Azure OpenAI credentials
+- Fill in Azure AI Foundry project endpoint
+- Optionally add API key (not recommended)
 - Run `docker-compose up`
 
 ### Azure Deployment
 - Use Azure CLI commands from DEPLOYMENT.md
 - Configure via environment variables
-- Optional: Enable managed identity for keyless access
+- Recommended: Enable managed identity for keyless access
+- Application uses DefaultAzureCredential automatically
 
 ## Security Considerations
 
@@ -152,10 +159,11 @@ Azure AI Foundry
 ## Testing Requirements
 
 To fully test the application, you need:
-1. Azure OpenAI account with a deployed model (gpt-4, gpt-35-turbo, or gpt-4o)
-2. API endpoint and key
-3. Configure environment variables or appsettings.json
-4. Run the application and access the chat page
+1. Azure AI Foundry project with a deployed model (gpt-4, gpt-3.5-turbo, or gpt-4o)
+2. Azure AI Foundry project endpoint
+3. Authentication via `az login` or API key
+4. Configure environment variables or appsettings.json
+5. Run the application and access the chat page
 
 ## Future Enhancements (Not Implemented)
 

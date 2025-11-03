@@ -42,6 +42,7 @@ dotnet run
 Main client for interacting with Azure AI Agent Service.
 
 ```csharp
+// Authenticates using DefaultAzureCredential (Azure CLI, Managed Identity, etc.)
 var client = new PersistentAgentsClient(endpoint, new DefaultAzureCredential());
 ```
 
@@ -49,7 +50,7 @@ var client = new PersistentAgentsClient(endpoint, new DefaultAzureCredential());
 A conversation session.
 
 ```csharp
-var threadResponse = await client.Threads.CreateThreadAsync();
+var threadResponse = client.Threads.CreateThread();
 var threadId = threadResponse.Value.Id;
 ```
 
@@ -68,14 +69,14 @@ var agent = client.Administration.CreateAgent(
 Execution of an agent on a thread.
 
 ```csharp
-var runResponse = await client.Runs.CreateRunAsync(threadId, agentId);
+var runResponse = client.Runs.CreateRun(threadId, agentId);
 var run = runResponse.Value;
 
 // Poll until complete
 while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress)
 {
     await Task.Delay(1000);
-    run = (await client.Runs.GetRunAsync(threadId, run.Id)).Value;
+    run = client.Runs.GetRun(threadId, run.Id).Value;
 }
 ```
 
@@ -83,8 +84,8 @@ while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress)
 Get the agent's response.
 
 ```csharp
-var messages = await client.Messages.GetMessagesAsync(threadId);
-var lastMessage = messages.Value.Data
+var messages = client.Messages.GetMessages(threadId);
+var lastMessage = messages
     .Where(m => m.Role == MessageRole.Assistant)
     .FirstOrDefault();
 ```
@@ -128,32 +129,32 @@ public async Task<string> ProcessQueryAsync(string query, CancellationToken ct =
     var agentId = GetOrResolveAgentId();
     
     // 2. Create thread
-    var threadResponse = await _agentsClient.Threads.CreateThreadAsync(ct);
+    var threadResponse = _agentsClient.Threads.CreateThread();
     var threadId = threadResponse.Value.Id;
     
     // 3. Add user message
-    await _agentsClient.Messages.CreateMessageAsync(threadId, MessageRole.User, query, ct);
+    _agentsClient.Messages.CreateMessage(threadId, MessageRole.User, query);
     
     // 4. Create run
-    var runResponse = await _agentsClient.Runs.CreateRunAsync(threadId, agentId, ct);
+    var runResponse = _agentsClient.Runs.CreateRun(threadId, agentId);
     var run = runResponse.Value;
     
     // 5. Poll until complete
     while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress)
     {
         await Task.Delay(1000, ct);
-        run = (await _agentsClient.Runs.GetRunAsync(threadId, run.Id, ct)).Value;
+        run = _agentsClient.Runs.GetRun(threadId, run.Id).Value;
     }
     
     // 6. Get response
-    var messages = await _agentsClient.Messages.GetMessagesAsync(threadId, ct);
-    var lastMessage = messages.Value.Data
+    var messages = _agentsClient.Messages.GetMessages(threadId);
+    var lastMessage = messages
         .Where(m => m.Role == MessageRole.Assistant)
         .FirstOrDefault();
     
-    if (lastMessage?.Content?.FirstOrDefault() is MessageTextContent textContent)
+    if (lastMessage?.ContentItems?.FirstOrDefault() is MessageTextContent textContent)
     {
-        return textContent.Text.Value;
+        return textContent.Text;
     }
     
     return "No response generated";

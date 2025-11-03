@@ -73,7 +73,7 @@ This application supports two authentication methods:
 
 1. Clone the repository
 2. Login to Azure CLI:
-   ```powershell
+   ```bash
    az login
    ```
 3. Configure `appsettings.Development.json`:
@@ -85,11 +85,18 @@ This application supports two authentication methods:
      }
    }
    ```
-4. Run the application - it will automatically use your Azure CLI credentials!
+4. Run the application:
+   ```bash
+   cd RagAgentApp
+   dotnet run
+   ```
+5. The application will automatically use your Azure CLI credentials via `DefaultAzureCredential`!
 
 ### Alternative: API Key for Testing
 
-If you prefer using an API key for local testing:
+⚠️ **Not recommended for production use**
+
+If you need to use an API key for quick testing:
 
 ```json
 {
@@ -101,21 +108,21 @@ If you prefer using an API key for local testing:
 }
 ```
 
-⚠️ **Never commit API keys to source control!**
+⚠️ **Never commit API keys to source control!** Use environment variables or Azure Key Vault for secrets.
 
 ### Environment Variables
 
 For container deployments and CI/CD:
 
-**Entra ID (Recommended):**
+**Required:**
 - `AZURE_AI_PROJECT_ENDPOINT`: Your Azure AI Foundry project endpoint
 - `AZURE_AI_MODEL_DEPLOYMENT_NAME`: Your deployed model name
-- `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET`: Service principal credentials (optional)
 
-**API Key (Not recommended for production):**
-- `AZURE_AI_PROJECT_ENDPOINT`: Your Azure AI Foundry project endpoint
-- `AZURE_AI_API_KEY`: Your API key
-- `AZURE_AI_MODEL_DEPLOYMENT_NAME`: Your deployed model name
+**Optional (Authentication):**
+- `AZURE_AI_API_KEY`: API key (for testing only, not recommended for production)
+- `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_CLIENT_SECRET`: Service principal credentials (alternative to Managed Identity)
+
+**Note**: If API key is not provided, the application automatically uses `DefaultAzureCredential` which supports Azure CLI, Managed Identity, Visual Studio credentials, and more.
 
 ## Running Locally
 

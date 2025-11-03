@@ -21,28 +21,30 @@ Choose your preferred method:
 - ✅ Docker Desktop ([Download](https://www.docker.com/products/docker-desktop))
 - ✅ Azure OpenAI access with API key
 
-## Step 1: Choose Your Authentication Method
+## Step 1: Authentication Setup
 
-### Option A: Entra ID (Recommended - No keys needed!)
+### Recommended: Entra ID (No API keys needed!)
 
-1. Install Azure CLI:
+1. **Install Azure CLI** (if not already installed):
    ```powershell
    winget install Microsoft.AzureCLI
    ```
 
-2. Login to Azure:
+2. **Login to Azure**:
    ```powershell
    az login
    ```
 
-3. You're done! The app will use your Azure credentials automatically.
+3. **That's it!** The app will automatically use your Azure credentials via `DefaultAzureCredential`.
 
-### Option B: API Key (For Testing)
+### Alternative: API Key (For quick testing only)
+
+⚠️ **Not recommended for production**
 
 1. Go to [Azure AI Foundry](https://ai.azure.com)
 2. Navigate to your Azure AI project
 3. Go to **Settings** → **Keys and Endpoint**
-4. Copy your API key
+4. Copy your API key (you'll use this in Step 2b)
 
 ## Step 1b: Get Azure AI Foundry Project Details
 
@@ -69,18 +71,20 @@ cp .env.example .env
 nano .env  # or use your favorite editor
 ```
 
-Your `.env` should look like (Option 1 - Connection String):
+### Using Entra ID (Recommended):
 ```bash
-AZURE_AI_CONNECTION_STRING=your-connection-string-here
+AZURE_AI_PROJECT_ENDPOINT=https://your-foundry.services.ai.azure.com/api/projects/YourProject
 AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
 ```
 
-Or (Option 2 - Endpoint and Key):
+### Using API Key (Testing only):
 ```bash
-AZURE_AI_PROJECT_ENDPOINT=https://your-project.cognitiveservices.azure.com/
+AZURE_AI_PROJECT_ENDPOINT=https://your-foundry.services.ai.azure.com/api/projects/YourProject
 AZURE_AI_API_KEY=your-api-key-here
 AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
 ```
+
+**Note**: When `AZURE_AI_API_KEY` is not provided, the application automatically uses `DefaultAzureCredential` for authentication (Azure CLI, Managed Identity, etc.).
 
 ## Step 3: Run the Application
 
