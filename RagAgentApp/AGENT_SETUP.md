@@ -7,7 +7,7 @@ This application supports two ways to work with Azure AI Agents:
 If you've already created agents in Azure AI Foundry, you can reference them directly:
 
 1. **Go to Azure AI Foundry**: https://ai.azure.com
-2. **Navigate to your project**: DerekAzureFoundry
+2. **Navigate to your project**
 3. **Go to the "Agents" section** in the left navigation
 4. **Find or create your agents**:
    - Create an "SOP Expert Agent" 
@@ -17,8 +17,8 @@ If you've already created agents in Azure AI Foundry, you can reference them dir
    ```json
    {
      "AzureAI": {
-       "SopAgentId": "asst_0EmJcRf2foX9fE0QKRMrcaXp",
-       "PolicyAgentId": "asst_1FnKdsGh3gpY0gF1PLSndbYq"
+       "SopAgentId": "asst_xxxxxxxxxxxxxxxxxxxx",
+       "PolicyAgentId": "asst_yyyyyyyyyyyyyyyyyyyy"
      }
    }
    ```
@@ -94,8 +94,8 @@ For container deployments, you can use environment variables instead:
 ```bash
 AZURE_AI_PROJECT_ENDPOINT=https://your-foundry.services.ai.azure.com/api/projects/YourProject
 AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
-AZURE_AI_SOP_AGENT_ID=asst_xxxxxxxxxx
-AZURE_AI_POLICY_AGENT_ID=asst_xxxxxxxxxx
+AZURE_AI_SOP_AGENT_ID=asst_xxxxxxxxxxxxxxxxxxxx
+AZURE_AI_POLICY_AGENT_ID=asst_yyyyyyyyyyyyyyyyyyyy
 ```
 
 **Note**: `AZURE_AI_API_KEY` is optional. If not provided, the app uses `DefaultAzureCredential` for authentication.
