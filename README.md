@@ -2,22 +2,36 @@
 
 RAG Agent System for Standard Operating Procedures and Policy Management
 
+## 🎯 Hackathon Participants
+
+**Looking for the hackathon challenge?** Check out [HACKATHON.md](HACKATHON.md) for:
+- Step-by-step implementation guide
+- Task breakdown with hints
+- Success criteria and testing instructions
+- Common issues and solutions
+
+This repository contains a partially implemented .NET Blazor application. Your task is to complete the agent implementations and orchestration logic!
+
+---
+
 ## Overview
 
-This repository contains a .NET Blazor web application that implements a dual-agent RAG (Retrieval-Augmented Generation) system using Azure AI Agent Service and Azure AI Foundry. The application features two specialized AI agents that simultaneously answer user queries:
+This repository contains a .NET Blazor web application that implements a multi-agent RAG (Retrieval-Augmented Generation) system using Azure AI Agent Service and Azure AI Foundry. The application features three specialized components:
 
 - **SOP Agent**: Expert in Standard Operating Procedures, work instructions, and process documentation
 - **Policy Agent**: Expert in company policies, regulations, and compliance requirements
+- **Delta Analyzer**: Compares responses from both agents and identifies key differences
 
 ## Features
 
-- 🤖 **Dual Agent Architecture**: Questions are routed to both agents via orchestrator with function calling
-- 💬 **Interactive Chat Interface**: Real-time responses in separate panels for each agent
+- 🤖 **Multi-Agent Architecture**: Questions are routed to both agents via orchestrator with function calling
+- 💬 **Three-Panel Interface**: Real-time responses in separate panels for SOP, Policy, and Delta Analysis
+- 🔍 **Delta Analysis**: Intelligent comparison of agent responses with structured tables
 - 🔐 **Entra ID Authentication**: Keyless authentication via DefaultAzureCredential (recommended)
 - 🐳 **Container-Ready**: Fully dockerized for easy deployment
 - ☁️ **Azure Container Apps Support**: Deploy to Azure with managed identity support
 - 🔄 **Agent Persistence**: Agents stored in Azure AI Foundry and reused across restarts
-- 🔍 **RAG Capabilities**: Built-in Azure AI Search integration for knowledge retrieval
+- � **RAG Capabilities**: Built-in Azure AI Search integration for knowledge retrieval
 - 🎯 **Thread Management**: Conversation threads reused for efficiency
 
 ## Quick Start
@@ -30,8 +44,10 @@ See the [RagAgentApp/README.md](RagAgentApp/README.md) for detailed setup and us
 
 ## Documentation
 
+- **[🎯 HACKATHON GUIDE](HACKATHON.md)** - Start here for hackathon challenge!
 - [Application README](RagAgentApp/README.md) - Setup, configuration, and local development
 - [Deployment Guide](RagAgentApp/DEPLOYMENT.md) - Azure Container Apps deployment instructions
+- [Quick Start](QUICKSTART.md) - 5-minute quick start guide
 
 ## Architecture
 
@@ -191,6 +207,7 @@ MIT License - See LICENSE file for details
 
 ## Support
 
+- 🎯 **[HACKATHON GUIDE](HACKATHON.md)** - Complete hackathon instructions
 - 📖 [Complete Guide](RagAgentApp/docs/GUIDE.md)
 - 🏗️ [Technical Documentation](RagAgentApp/docs/TECHNICAL.md)
 - 🚀 [Quick Start](QUICKSTART.md)
@@ -198,4 +215,5 @@ MIT License - See LICENSE file for details
 
 ---
 
-**Ready to get started?** Check out the [QUICKSTART.md](QUICKSTART.md) guide!
+**Hackathon Participant?** Start with [HACKATHON.md](HACKATHON.md)!  
+**Just exploring?** Check out the [QUICKSTART.md](QUICKSTART.md) guide!

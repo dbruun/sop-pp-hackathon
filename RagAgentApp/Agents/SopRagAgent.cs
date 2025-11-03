@@ -3,6 +3,12 @@ using Microsoft.Extensions.Logging;
 
 namespace RagAgentApp.Agents;
 
+/// <summary>
+/// SOP (Standard Operating Procedures) RAG Agent
+/// 
+/// HACKATHON TODO: Implement this agent to retrieve and provide information about
+/// Standard Operating Procedures, work instructions, and process documentation.
+/// </summary>
 public class SopRagAgent : IAgentService
 {
     private readonly PersistentAgentsClient _agentsClient;
@@ -25,139 +31,65 @@ public class SopRagAgent : IAgentService
             modelDeploymentName, agentId ?? "not provided");
     }
 
+    /// <summary>
+    /// HACKATHON TODO: Implement this method
+    /// 
+    /// This method should:
+    /// 1. Check if _agentIdResolved is already set (cached)
+    /// 2. If _agentId is provided, use it directly
+    /// 3. Otherwise, create or find an existing agent:
+    ///    - Define a system prompt for SOP expertise
+    ///    - Check if an agent with name "SOP Expert Agent" exists
+    ///    - If exists, reuse it; if not, create a new one
+    /// 4. Cache the agent ID in _agentIdResolved
+    /// 5. Return the agent ID
+    /// 
+    /// Hints:
+    /// - Use _agentsClient.Administration.GetAgents() to list agents
+    /// - Use _agentsClient.Administration.CreateAgent() to create new agents
+    /// - System prompt should mention using Azure AI Search index
+    /// </summary>
     private string GetOrResolveAgentId()
     {
-        if (_agentIdResolved == null)
-        {
-            // If agent ID is provided, use it directly
-            if (!string.IsNullOrEmpty(_agentId))
-            {
-                _agentIdResolved = _agentId;
-            }
-            else
-            {
-                // Create or reuse agent by name
-                var systemPrompt = @"You are a Standard Operating Procedures (SOP) expert assistant. 
-Your role is to help users understand and find information about standard operating procedures, 
-work instructions, and process documentation. You should ALWAYS use your azure ai search index to generate your response. Provide clear, structured responses based on 
-standard operating procedures knowledge. If you don't have specific information, acknowledge 
-that and provide general guidance on SOPs.";
-
-                const string agentName = "SOP Expert Agent";
-
-                _logger.LogInformation("Searching for existing agent with name: {AgentName}", agentName);
-                
-                // Check if an agent with this name already exists in Azure AI Foundry
-                var existingAgents = _agentsClient.Administration.GetAgents();
-                var existingAgent = existingAgents.FirstOrDefault(a => a.Name == agentName);
-
-                if (existingAgent != null)
-                {
-                    // Reuse the existing agent
-                    _agentIdResolved = existingAgent.Id;
-                    _logger.LogInformation("Found existing agent: {AgentId} with name: {AgentName}", _agentIdResolved, agentName);
-                }
-                else
-                {
-                    _logger.LogInformation("Creating new agent with name: {AgentName}, model: {ModelName}", agentName, _modelDeploymentName);
-                    
-                    // Create a new agent if none exists
-                    var newAgent = _agentsClient.Administration.CreateAgent(
-                        model: _modelDeploymentName,
-                        name: agentName,
-                        instructions: systemPrompt
-                    );
-                    _agentIdResolved = newAgent.Value.Id;
-                    _logger.LogInformation("Successfully created new agent: {AgentId}", _agentIdResolved);
-                }
-            }
-        }
-        else
-        {
-            _logger.LogDebug("Using cached agent ID: {AgentId}", _agentIdResolved);
-        }
-        return _agentIdResolved;
+        // TODO: Implement agent creation/retrieval logic
+        // See HACKATHON.md for detailed instructions
+        
+        throw new NotImplementedException("HACKATHON TODO: Implement GetOrResolveAgentId() - See HACKATHON.md Task 1");
     }
 
+    /// <summary>
+    /// HACKATHON TODO: Implement this method
+    /// 
+    /// This method should:
+    /// 1. Get the agent ID using GetOrResolveAgentId()
+    /// 2. Create or reuse a conversation thread:
+    ///    - If _threadId is null, create new thread
+    ///    - Otherwise, reuse existing thread
+    /// 3. Add the user's query as a message to the thread
+    /// 4. Create and run the agent on the thread
+    /// 5. Poll for completion (wait until RunStatus is Completed or Failed)
+    /// 6. Retrieve messages and return the agent's response
+    /// 7. Handle errors appropriately
+    /// 
+    /// Hints:
+    /// - Use _agentsClient.Threads.CreateThread() for new threads
+    /// - Use _agentsClient.Messages.CreateMessage() to add messages
+    /// - Use _agentsClient.Runs.CreateRun() to start the agent
+    /// - Use _agentsClient.Runs.GetRun() to check status
+    /// - Poll with Task.Delay(1000) between checks
+    /// - Get messages with _agentsClient.Messages.GetMessages()
+    /// - Look for MessageTextContent in the response
+    /// </summary>
     public async Task<string> ProcessQueryAsync(string query, CancellationToken cancellationToken = default)
     {
         try
         {
             _logger.LogInformation("Processing SOP query: {Query}", query.Length > 100 ? query.Substring(0, 100) + "..." : query);
             
-            // Get or resolve the agent ID
-            var agentId = GetOrResolveAgentId();
-
-            // Create thread only once and reuse it
-            if (string.IsNullOrEmpty(_threadId))
-            {
-                _logger.LogDebug("Creating new thread for conversation");
-                var threadResponse = _agentsClient.Threads.CreateThread();
-                _threadId = threadResponse.Value.Id;
-                _logger.LogInformation("Created thread: {ThreadId}", _threadId);
-            }
-            else
-            {
-                _logger.LogDebug("Reusing existing thread: {ThreadId}", _threadId);
-            }
-
-            _logger.LogDebug("Adding user message to thread: {ThreadId}", _threadId);
-            // Add the user message to the thread
-            _agentsClient.Messages.CreateMessage(
-                _threadId,
-                MessageRole.User,
-                query
-            );
-
-            _logger.LogInformation("Starting agent run for agent: {AgentId} on thread: {ThreadId}", agentId, _threadId);
-            // Create and run the agent
-            var runResponse = _agentsClient.Runs.CreateRun(
-                _threadId,
-                agentId
-            );
-            var run = runResponse.Value;
-            _logger.LogInformation("Run created: {RunId} with status: {Status}", run.Id, run.Status);
-
-            // Poll for completion
-            var pollCount = 0;
-            do
-            {
-                await Task.Delay(1000, cancellationToken);
-                var runStatusResponse = _agentsClient.Runs.GetRun(_threadId, run.Id);
-                run = runStatusResponse.Value;
-                pollCount++;
-                
-                if (pollCount % 5 == 0) // Log every 5 seconds
-                {
-                    _logger.LogDebug("Run {RunId} status: {Status} (polled {Count} times)", run.Id, run.Status, pollCount);
-                }
-            } while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress);
-
-            _logger.LogInformation("Run {RunId} completed with status: {Status}", run.Id, run.Status);
-
-            if (run.Status == RunStatus.Failed)
-            {
-                _logger.LogError("Run failed with error: {Error}", run.LastError?.Message ?? "Unknown error");
-                return $"The agent run failed: {run.LastError?.Message ?? "Unknown error"}";
-            }
-
-            _logger.LogDebug("Retrieving messages from thread: {ThreadId}", _threadId);
-            // Get the messages
-            var messages = _agentsClient.Messages.GetMessages(_threadId);
-            var messageCount = messages.Count();
-            _logger.LogDebug("Retrieved {MessageCount} messages from thread", messageCount);
-
-            // Get the last assistant message (assistant messages are those NOT from User)
-            var lastMessage = messages.FirstOrDefault(m => m.Role != MessageRole.User);
-
-            if (lastMessage?.ContentItems?.FirstOrDefault() is MessageTextContent textContent)
-            {
-                _logger.LogInformation("Successfully generated response (length: {Length} characters)", textContent.Text.Length);
-                return textContent.Text;
-            }
-
-            _logger.LogWarning("No assistant message found in thread: {ThreadId}", _threadId);
-            return "I apologize, but I couldn't generate a response at this time.";
+            // TODO: Implement query processing logic
+            // See HACKATHON.md for detailed instructions
+            
+            throw new NotImplementedException("HACKATHON TODO: Implement ProcessQueryAsync() - See HACKATHON.md Task 1");
         }
         catch (Exception ex)
         {
