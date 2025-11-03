@@ -63,17 +63,18 @@ acknowledge that and provide general policy guidance.
 
 ## Required Configuration
 
-Regardless of which option you choose, you **must** provide:
+You **must** provide the project endpoint and model name:
 
 ```json
 {
   "AzureAI": {
     "ProjectEndpoint": "https://<your-foundry>.services.ai.azure.com/api/projects/<YourProject>",
-    "ApiKey": "<your-api-key>",
     "ModelDeploymentName": "gpt-4"
   }
 }
 ```
+
+**Authentication**: The application uses `DefaultAzureCredential` by default (Azure CLI, Managed Identity, etc.). You can optionally add `"ApiKey"` for testing, but it's not recommended for production.
 
 ### Finding Your Configuration Values:
 
@@ -82,11 +83,7 @@ Regardless of which option you choose, you **must** provide:
    - Look for "Project connection string" or "Endpoint"
    - Format: `https://<foundry-name>.services.ai.azure.com/api/projects/<project-name>`
 
-2. **ApiKey**: 
-   - In Azure AI Foundry → Your Project → Settings → Keys and Endpoint
-   - Copy one of the API keys
-
-3. **ModelDeploymentName**: 
+2. **ModelDeploymentName**: 
    - In Azure AI Foundry → Your Project → Deployments
    - Find your deployed model name (e.g., `gpt-4`, `gpt-4o`, `gpt-35-turbo`)
 
@@ -95,17 +92,19 @@ Regardless of which option you choose, you **must** provide:
 For container deployments, you can use environment variables instead:
 
 ```bash
-AZURE_AI_PROJECT_ENDPOINT=https://derekazurefoundry.services.ai.azure.com/api/projects/DerekAzureFoundry
-AZURE_AI_API_KEY=<your-api-key>
+AZURE_AI_PROJECT_ENDPOINT=https://your-foundry.services.ai.azure.com/api/projects/YourProject
 AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
-AZURE_AI_SOP_AGENT_ID=asst_0EmJcRf2foX9fE0QKRMrcaXp
-AZURE_AI_POLICY_AGENT_ID=asst_1FnKdsGh3gpY0gF1PLSndbYq
+AZURE_AI_SOP_AGENT_ID=asst_xxxxxxxxxx
+AZURE_AI_POLICY_AGENT_ID=asst_xxxxxxxxxx
 ```
+
+**Note**: `AZURE_AI_API_KEY` is optional. If not provided, the app uses `DefaultAzureCredential` for authentication.
 
 ## Troubleshooting
 
-### "Invalid connection string format"
-- ✅ **Fixed!** This error has been resolved. The app now uses endpoint + API key directly.
+### Authentication Issues
+- Ensure you're logged in with `az login` if using Entra ID authentication
+- If using API key, verify it's correct and not expired
 
 ### "Agent not found"
 - Make sure the agent ID you provided exists in your Azure AI Foundry project
@@ -113,8 +112,9 @@ AZURE_AI_POLICY_AGENT_ID=asst_1FnKdsGh3gpY0gF1PLSndbYq
 - Check that the agent hasn't been deleted
 
 ### "Unauthorized" or "403 Forbidden"
-- Verify your API key is correct and not expired
-- Ensure your API key has permission to access the project
+- Run `az login` and verify you're signed in to the correct Azure account
+- Ensure your account has the "Azure AI Developer" role on the project
+- If using API key, verify it's correct and not expired
 - Check that your Azure AI Foundry project is active
 
 ### Agents are being created on every restart

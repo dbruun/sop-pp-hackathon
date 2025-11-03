@@ -30,15 +30,15 @@ ACR_NAME="acrragagent$(openssl rand -hex 3)"  # Must be globally unique
 CONTAINERAPPS_ENV="env-ragagent"
 APP_NAME="ragagentapp"
 
-# Azure AI Foundry configuration (Option 1: Connection String - Recommended)
-AZURE_AI_CONNECTION_STRING="your-connection-string-here"
+# Azure AI Foundry configuration
+AZURE_AI_ENDPOINT="https://your-foundry.services.ai.azure.com/api/projects/YourProject"
 MODEL_DEPLOYMENT="gpt-4"  # or gpt-35-turbo, gpt-4o, etc.
 
-# OR (Option 2: Endpoint + Key)
-AZURE_AI_ENDPOINT="https://your-project.cognitiveservices.azure.com/"
+# Optional: API Key (only if not using Managed Identity)
 AZURE_AI_KEY="your-api-key-here"
-MODEL_DEPLOYMENT="gpt-4"  # or gpt-35-turbo, gpt-4o, etc.
 ```
+
+**Note**: For production, use Managed Identity instead of API keys (see section "Using Managed Identity" below).
 
 ### 3. Create Resource Group
 
@@ -115,7 +115,9 @@ ACR_PASSWORD=$(az acr credential show \
 
 ### 8. Deploy Container App
 
-**Option 1: Using Connection String (Recommended)**
+**Option 1: With Managed Identity (Recommended for Production)**
+
+First enable managed identity, then deploy:
 
 ```bash
 az containerapp create \
@@ -128,19 +130,20 @@ az containerapp create \
   --registry-password $ACR_PASSWORD \
   --target-port 8080 \
   --ingress external \
-  --secrets \
-    azure-ai-connection-string="$AZURE_AI_CONNECTION_STRING" \
   --env-vars \
     ASPNETCORE_ENVIRONMENT=Production \
-    AZURE_AI_CONNECTION_STRING=secretref:azure-ai-connection-string \
+    AZURE_AI_PROJECT_ENDPOINT="$AZURE_AI_ENDPOINT" \
     AZURE_AI_MODEL_DEPLOYMENT_NAME="$MODEL_DEPLOYMENT" \
   --cpu 1.0 \
   --memory 2.0Gi \
   --min-replicas 1 \
-  --max-replicas 3
+  --max-replicas 3 \
+  --system-assigned
 ```
 
-**Option 2: Using Endpoint + Key**
+Then grant the managed identity access to Azure AI Foundry (see "Using Managed Identity" section below).
+
+**Option 2: Using API Key (Testing Only)**
 
 ```bash
 az containerapp create \
@@ -383,12 +386,13 @@ az containerapp show \
 
 ### Azure AI Foundry connection issues
 
-- Verify connection string format is correct (if using connection string)
-- Verify endpoint URL is correct (if using endpoint + key)
-- Check API key is valid
+- Verify endpoint URL format: `https://your-foundry.services.ai.azure.com/api/projects/YourProject`
+- If using Managed Identity, ensure proper role assignments are in place
+- If using API key, verify it's valid and not expired
 - Ensure model deployment name matches your Azure AI Foundry deployment
 - Verify agent service is enabled in your Azure AI project
 - Verify network connectivity from Container Apps to Azure AI Foundry
+- Check that `DefaultAzureCredential` can authenticate (view container logs for details)
 
 ## Cost Optimization
 

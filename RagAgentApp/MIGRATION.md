@@ -37,12 +37,12 @@ This document describes the migration from Microsoft Semantic Kernel to the Azur
 
 ## Configuration
 
-### Option 1: Azure AI Foundry Project Connection String (Recommended)
+### Recommended: Entra ID with DefaultAzureCredential
 
 ```json
 {
   "AzureAI": {
-    "ConnectionString": "your-azure-ai-foundry-connection-string",
+    "ProjectEndpoint": "https://your-foundry.services.ai.azure.com/api/projects/YourProject",
     "ModelDeploymentName": "gpt-4"
   }
 }
@@ -50,28 +50,30 @@ This document describes the migration from Microsoft Semantic Kernel to the Azur
 
 Or via environment variables:
 ```bash
-AZURE_AI_CONNECTION_STRING=your-azure-ai-foundry-connection-string
+AZURE_AI_PROJECT_ENDPOINT=https://your-foundry.services.ai.azure.com/api/projects/YourProject
 AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
 ```
 
-### Option 2: Direct Endpoint + API Key
+**Authentication**: The application uses `DefaultAzureCredential` which automatically tries:
+- Environment variables (Service Principal)
+- Managed Identity (in Azure)
+- Azure CLI credentials
+- Visual Studio credentials
+- VS Code credentials
+
+### Alternative: API Key (Testing Only)
 
 ```json
 {
   "AzureAI": {
-    "ProjectEndpoint": "https://your-project.cognitiveservices.azure.com/",
+    "ProjectEndpoint": "https://your-foundry.services.ai.azure.com/api/projects/YourProject",
     "ApiKey": "your-api-key",
     "ModelDeploymentName": "gpt-4"
   }
 }
 ```
 
-Or via environment variables:
-```bash
-AZURE_AI_PROJECT_ENDPOINT=https://your-project.cognitiveservices.azure.com/
-AZURE_AI_API_KEY=your-api-key
-AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4
-```
+⚠️ **Not recommended for production use**
 
 ## Benefits of Azure AI Agent Service
 
