@@ -172,19 +172,22 @@ We've designed three implementation levels for different skill levels:
 #### 2. Get Connection Information
 
 From your project overview page:
-- Copy the **Project Endpoint** (format: `https://xxx.services.ai.azure.com/api/projects/xxx`)
-- Note your **Model Deployment Name**
+- Copy the **Project Endpoint** (format: `https://your-foundry.services.ai.azure.com/api/projects/YourProject`)
+- Note your **Model Deployment Name** (e.g., "gpt-4", "gpt-35-turbo")
 
 #### 3. Configure Authentication
 
-**Option A: Azure CLI (Recommended for local dev)**
+**Recommended: Azure CLI (Entra ID)**
 ```bash
 az login
 ```
 
-**Option B: API Key**
+This will allow the application to authenticate using `DefaultAzureCredential`.
+
+**Alternative: API Key (Testing only)**
 - Go to project settings → Keys and Endpoint
-- Copy an API key (don't commit this!)
+- Copy an API key (⚠️ don't commit this!)
+- Add it to your configuration (not recommended for production)
 
 #### 4. Update Configuration
 
@@ -206,7 +209,16 @@ Create `RagAgentApp/appsettings.Development.json`:
 
 #### 5. Implement SopRagAgent
 
-Replace the stubbed `ProcessQueryAsync` method:
+Replace the stubbed `ProcessQueryAsync` method. The key steps are:
+
+1. **Get or create the agent** using `GetOrResolveAgentId()`
+2. **Create a thread** for the conversation
+3. **Add the user's message** to the thread
+4. **Create and execute a run** with the agent
+5. **Poll for completion** until the agent finishes processing
+6. **Retrieve the response** from the thread messages
+
+Example pattern (refer to inline TODOs in the code for specifics):
 
 ```csharp
 public async Task<string> ProcessQueryAsync(string query, CancellationToken cancellationToken = default)
@@ -219,31 +231,21 @@ public async Task<string> ProcessQueryAsync(string query, CancellationToken canc
         var agentId = GetOrResolveAgentId();
 
         // Create thread
-        var threadResponse = await _agentsClient.Threads.CreateThreadAsync(cancellationToken);
+        var threadResponse = _agentsClient.Threads.CreateThread();
         var threadId = threadResponse.Value.Id;
 
         // Add user message
-        await _agentsClient.Messages.CreateMessageAsync(
-            threadId,
-            MessageRole.User,
-            query,
-            cancellationToken: cancellationToken
-        );
+        _agentsClient.Messages.CreateMessage(threadId, MessageRole.User, query);
 
         // Create and run agent
-        var runResponse = await _agentsClient.Runs.CreateRunAsync(
-            threadId,
-            agentId,
-            cancellationToken: cancellationToken
-        );
+        var runResponse = _agentsClient.Runs.CreateRun(threadId, agentId);
         var run = runResponse.Value;
 
         // Poll until complete
         while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress)
         {
             await Task.Delay(1000, cancellationToken);
-            var statusResponse = await _agentsClient.Runs.GetRunAsync(threadId, run.Id, cancellationToken);
-            run = statusResponse.Value;
+            run = _agentsClient.Runs.GetRun(threadId, run.Id).Value;
         }
 
         if (run.Status == RunStatus.Failed)
@@ -251,15 +253,13 @@ public async Task<string> ProcessQueryAsync(string query, CancellationToken canc
             return $"Agent run failed: {run.LastError?.Message}";
         }
 
-        // Get messages
-        var messages = await _agentsClient.Messages.GetMessagesAsync(threadId, cancellationToken);
-        var lastMessage = messages.Value.Data
-            .Where(m => m.Role == MessageRole.Assistant)
-            .FirstOrDefault();
-
-        if (lastMessage?.Content?.FirstOrDefault() is MessageTextContent textContent)
+        // Get messages and return response
+        var messages = _agentsClient.Messages.GetMessages(threadId);
+        var lastMessage = messages.FirstOrDefault(m => m.Role != MessageRole.User);
+        
+        if (lastMessage?.ContentItems?.FirstOrDefault() is MessageTextContent textContent)
         {
-            return textContent.Text.Value;
+            return textContent.Text;
         }
 
         return "No response generated";
@@ -271,6 +271,8 @@ public async Task<string> ProcessQueryAsync(string query, CancellationToken canc
     }
 }
 ```
+
+**Note**: Refer to the PersistentAgentsClient API for the exact method signatures.
 
 #### 6. Do the Same for PolicyRagAgent
 
