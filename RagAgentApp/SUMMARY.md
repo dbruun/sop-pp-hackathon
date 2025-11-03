@@ -159,7 +159,7 @@ Azure AI Foundry
 ## Testing Requirements
 
 To fully test the application, you need:
-1. Azure AI Foundry project with a deployed model (gpt-4, gpt-35-turbo, or gpt-4o)
+1. Azure AI Foundry project with a deployed model (gpt-4, gpt-3.5-turbo, or gpt-4o)
 2. Azure AI Foundry project endpoint
 3. Authentication via `az login` or API key
 4. Configure environment variables or appsettings.json

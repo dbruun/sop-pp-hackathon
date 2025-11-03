@@ -255,7 +255,9 @@ public async Task<string> ProcessQueryAsync(string query, CancellationToken canc
 
         // Get messages and return response
         var messages = _agentsClient.Messages.GetMessages(threadId);
-        var lastMessage = messages.FirstOrDefault(m => m.Role != MessageRole.User);
+        var lastMessage = messages
+            .Where(m => m.Role == MessageRole.Assistant)
+            .FirstOrDefault();
         
         if (lastMessage?.ContentItems?.FirstOrDefault() is MessageTextContent textContent)
         {
