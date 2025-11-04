@@ -272,6 +272,7 @@
         var result = new System.Text.StringBuilder();
         var inTable = false;
         var isHeaderRow = false;
+        var inList = false;
 
         foreach (var line in lines)
         {
@@ -280,6 +281,13 @@
             // Check if this is a table row
             if (trimmedLine.StartsWith("|") && trimmedLine.EndsWith("|"))
             {
+                // Close list if we were in one
+                if (inList)
+                {
+                    result.Append("</ul>");
+                    inList = false;
+                }
+
                 if (!inTable)
                 {
                     result.Append("<table>");
@@ -331,16 +339,34 @@
                 // Handle markdown headers
                 if (trimmedLine.StartsWith("###"))
                 {
+                    // Close list if we were in one
+                    if (inList)
+                    {
+                        result.Append("</ul>");
+                        inList = false;
+                    }
                     var headerText = trimmedLine.Substring(3).Trim();
                     result.Append($"<h3>{System.Web.HttpUtility.HtmlEncode(headerText)}</h3>");
                 }
                 else if (trimmedLine.StartsWith("##"))
                 {
+                    // Close list if we were in one
+                    if (inList)
+                    {
+                        result.Append("</ul>");
+                        inList = false;
+                    }
                     var headerText = trimmedLine.Substring(2).Trim();
                     result.Append($"<h2>{System.Web.HttpUtility.HtmlEncode(headerText)}</h2>");
                 }
                 else if (trimmedLine.StartsWith("#"))
                 {
+                    // Close list if we were in one
+                    if (inList)
+                    {
+                        result.Append("</ul>");
+                        inList = false;
+                    }
                     var headerText = trimmedLine.Substring(1).Trim();
                     result.Append($"<h1>{System.Web.HttpUtility.HtmlEncode(headerText)}</h1>");
                 }
@@ -349,11 +375,22 @@
                     // Handle list items
                     if (trimmedLine.StartsWith("- ") || trimmedLine.StartsWith("* "))
                     {
+                        if (!inList)
+                        {
+                            result.Append("<ul>");
+                            inList = true;
+                        }
                         var listText = trimmedLine.Substring(2).Trim();
                         result.Append($"<li>{System.Web.HttpUtility.HtmlEncode(listText)}</li>");
                     }
                     else
                     {
+                        // Close list if we were in one
+                        if (inList)
+                        {
+                            result.Append("</ul>");
+                            inList = false;
+                        }
                         result.Append($"<p>{System.Web.HttpUtility.HtmlEncode(trimmedLine)}</p>");
                     }
                 }
@@ -364,6 +401,12 @@
         if (inTable)
         {
             result.Append("</table>");
+        }
+
+        // Close list if still open
+        if (inList)
+        {
+            result.Append("</ul>");
         }
 
         return result.ToString();

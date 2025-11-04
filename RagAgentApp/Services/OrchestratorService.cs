@@ -207,12 +207,21 @@ Use clear markdown formatting with tables where appropriate to make the comparis
             var run = runResponse.Value;
             _logger.LogInformation("Delta analysis run created: {RunId}", run.Id);
 
-            // Poll for completion
-            while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress)
+            // Poll for completion with timeout protection
+            var maxPollingAttempts = 120; // 2 minutes maximum (120 seconds)
+            var pollingAttempts = 0;
+            while ((run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress) && pollingAttempts < maxPollingAttempts)
             {
                 await Task.Delay(1000, cancellationToken);
                 var runStatusResponse = _agentsClient.Runs.GetRun(threadId, run.Id, cancellationToken);
                 run = runStatusResponse.Value;
+                pollingAttempts++;
+            }
+
+            if (pollingAttempts >= maxPollingAttempts)
+            {
+                _logger.LogWarning("Delta analysis polling timed out after {Attempts} attempts for run: {RunId}", pollingAttempts, run.Id);
+                return "Delta analysis timed out. Please try again.";
             }
 
             if (run.Status == RunStatus.Completed)
