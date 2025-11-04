@@ -29,7 +29,7 @@ RagAgentApp/
 │   └── OrchestratorService.cs     # TODO: Implement orchestration
 ├── Components/Pages/
 │   └── Chat.razor                 # UI (complete - no changes needed)
-└── Program.cs                     # Configuration (complete)
+└── Program.cs                     # TODO Register Singleton agents
 ```
 
 ## 🎯 Your Tasks
