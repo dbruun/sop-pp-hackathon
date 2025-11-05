@@ -534,8 +534,9 @@
                 pipelineTrace = trace;
                 
                 // Display the response in the SOP Agent panel for now
+                const string PipelineModeMessage = "Pipeline mode: See observability metrics below";
                 sopResponse = finalResponse;
-                policyResponse = "Pipeline mode: See observability metrics below";
+                policyResponse = PipelineModeMessage;
                 
                 isProcessing = false;
                 StateHasChanged();

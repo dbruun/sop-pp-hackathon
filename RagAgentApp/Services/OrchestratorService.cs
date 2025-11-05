@@ -45,7 +45,8 @@ public class OrchestratorService
         _executorAgent = executorAgent;
         _logger = logger;
         
-        _logger.LogInformation("OrchestratorService initialized with specialized agent pipeline: Intake -> Search -> Writer -> Reviewer -> Executor");
+        _logger.LogInformation("OrchestratorService initialized with specialized agent pipeline: {Pipeline}", 
+            $"{intakeAgent.AgentName} -> {searchAgent.AgentName} -> {writerAgent.AgentName} -> {reviewerAgent.AgentName} -> {executorAgent.AgentName}");
     }
 
     private string GetOrResolveOrchestratorAgentId()
@@ -555,14 +556,14 @@ Use clear markdown formatting with tables where appropriate to make the comparis
         try
         {
             _logger.LogInformation("Executing {AgentName} agent...", agentName);
-            await agent.ProcessQueryAsync(query, cancellationToken);
+            var response = await agent.ProcessQueryAsync(query, cancellationToken);
             
             trace.EndTime = DateTime.UtcNow;
             trace.Success = true;
             
             // Estimate tokens and cost (rough estimates based on typical usage)
             // In production, these should come from actual API responses
-            trace.TokensUsed = EstimateTokens(query) + EstimateTokens("response placeholder");
+            trace.TokensUsed = EstimateTokens(query) + EstimateTokens(response ?? "");
             trace.EstimatedCost = CalculateEstimatedCost(trace.TokensUsed);
             
             _logger.LogInformation("{AgentName} completed in {Duration}ms, ~{Tokens} tokens, ~${Cost}", 
@@ -581,21 +582,26 @@ Use clear markdown formatting with tables where appropriate to make the comparis
         return trace;
     }
 
+    // Token estimation constants
+    private const int CHARACTERS_PER_TOKEN = 4; // Approximate for English text
+    private const decimal INPUT_TOKEN_COST_PER_1K = 0.03m; // GPT-4 pricing
+    private const decimal OUTPUT_TOKEN_COST_PER_1K = 0.06m; // GPT-4 pricing
+
     private int EstimateTokens(string text)
     {
         // Rough estimate: ~4 characters per token for English text
-        return text.Length / 4;
+        return text.Length / CHARACTERS_PER_TOKEN;
     }
 
     private decimal CalculateEstimatedCost(int tokens)
     {
-        // Rough estimate based on GPT-4 pricing: $0.03 per 1K input tokens, $0.06 per 1K output tokens
+        // Rough estimate based on GPT-4 pricing
         // Assuming roughly equal split between input and output
         var inputTokens = tokens / 2;
         var outputTokens = tokens / 2;
         
-        var inputCost = (inputTokens / 1000.0m) * 0.03m;
-        var outputCost = (outputTokens / 1000.0m) * 0.06m;
+        var inputCost = (inputTokens / 1000.0m) * INPUT_TOKEN_COST_PER_1K;
+        var outputCost = (outputTokens / 1000.0m) * OUTPUT_TOKEN_COST_PER_1K;
         
         return inputCost + outputCost;
     }
