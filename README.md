@@ -11,7 +11,9 @@ This repository contains a .NET Blazor web application that implements a dual-ag
 
 ## Features
 
+### Core Features
 - 🤖 **Dual Agent Architecture**: Questions are routed to both agents via orchestrator with function calling
+- 🔄 **Specialized Agent Pipeline**: New mode with 5-stage processing (Intake → Search → Writer → Reviewer → Executor)
 - 💬 **Interactive Chat Interface**: Real-time responses in separate panels for each agent
 - 🔐 **Entra ID Authentication**: Keyless authentication via DefaultAzureCredential (recommended)
 - 🐳 **Container-Ready**: Fully dockerized for easy deployment
@@ -19,6 +21,19 @@ This repository contains a .NET Blazor web application that implements a dual-ag
 - 🔄 **Agent Persistence**: Agents stored in Azure AI Foundry and reused across restarts
 - 🔍 **RAG Capabilities**: Built-in Azure AI Search integration for knowledge retrieval
 - 🎯 **Thread Management**: Conversation threads reused for efficiency
+
+### Specialized Agent Pipeline
+- **IntakeAgent**: Intent detection and policy gating
+- **SearchAgent**: Azure AI Search hybrid retrieval (BM25 + vector search)
+- **WriterAgent**: Drafts responses with inline citations
+- **ReviewerAgent**: Validates claim grounding and flags low-confidence assertions
+- **ExecutorAgent**: Formats final output for chat window display
+
+### Observability
+- 📊 **Trace Spans**: Track execution time for each agent handoff
+- 💰 **Cost Tracking**: Estimate token usage and cost per agent
+- ⏱️ **Performance Metrics**: Monitor total pipeline duration and bottlenecks
+- 📈 **Real-time Dashboard**: View detailed execution traces in the UI
 
 ## Quick Start
 
@@ -34,6 +49,8 @@ See the [RagAgentApp/README.md](RagAgentApp/README.md) for detailed setup and us
 - [Deployment Guide](RagAgentApp/DEPLOYMENT.md) - Azure Container Apps deployment instructions
 
 ## Architecture
+
+### Dual-Agent Mode (Original)
 
 ```
 ┌─────────────────────┐
@@ -63,6 +80,51 @@ See the [RagAgentApp/README.md](RagAgentApp/README.md) for detailed setup and us
 │  • Azure OpenAI      │
 │  • Thread Management │
 └──────────────────────┘
+```
+
+### Specialized Pipeline Mode (New)
+
+```
+┌─────────────────────┐
+│     User (Browser)  │
+│   Blazor Interface  │
+└──────────┬──────────┘
+           │
+           ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    Orchestrator Service                       │
+│           (Coordinates agent handoffs with observability)     │
+└─────┬────────────────────────────────────────────────────────┘
+      │
+      ▼
+┌──────────────┐  Intent Analysis
+│ IntakeAgent  │────────────────────────┐
+└──────┬───────┘                        │
+       │                                 │
+       ▼                                 ▼
+┌──────────────┐  Retrieved Passages  ┌─────────────────┐
+│ SearchAgent  │─────────────────────▶│ WriterAgent     │
+└──────────────┘  (BM25 + Vector)     └────────┬────────┘
+                                               │
+                                               ▼
+                                      ┌─────────────────┐
+                                      │ ReviewerAgent   │
+                                      │ (Grounding      │
+                                      │  Validation)    │
+                                      └────────┬────────┘
+                                               │
+                                               ▼
+                                      ┌─────────────────┐
+                                      │ ExecutorAgent   │
+                                      │ (Output Format) │
+                                      └────────┬────────┘
+                                               │
+                                               ▼
+                                      ┌─────────────────────────┐
+                                      │  Final Response         │
+                                      │  + Observability Trace  │
+                                      │  (Time, Cost, Tokens)   │
+                                      └─────────────────────────┘
 ```
 
 ## Technology Stack
@@ -120,13 +182,21 @@ sop-pp-hackathon/
 ├── QUICKSTART.md               # 5-minute quick start
 ├── RagAgentApp/
 │   ├── Agents/                 # Agent implementations
-│   │   ├── SopRagAgent.cs
-│   │   └── PolicyRagAgent.cs
+│   │   ├── SopRagAgent.cs      # Original SOP agent
+│   │   ├── PolicyRagAgent.cs   # Original Policy agent
+│   │   ├── IntakeAgent.cs      # Intent & policy gating
+│   │   ├── SearchAgent.cs      # Hybrid retrieval
+│   │   ├── WriterAgent.cs      # Response drafting
+│   │   ├── ReviewerAgent.cs    # Grounding validation
+│   │   └── ExecutorAgent.cs    # Output formatting
 │   ├── Components/             # Blazor UI components
 │   │   └── Pages/
 │   │       └── Chat.razor      # Main chat interface
 │   ├── Services/
-│   │   └── OrchestratorService.cs
+│   │   └── OrchestratorService.cs  # Dual-mode orchestration
+│   ├── Models/
+│   │   ├── AgentExecutionTrace.cs  # Observability models
+│   │   └── AzureAISettings.cs      # Configuration
 │   ├── docs/
 │   │   ├── GUIDE.md           # Complete setup guide
 │   │   └── TECHNICAL.md       # Technical documentation
@@ -153,6 +223,19 @@ sop-pp-hackathon/
 - **Keyless Security**: Uses Managed Identity and DefaultAzureCredential (no API keys!)
 - **Production-Ready**: Container-ready, auto-scaling, comprehensive error handling
 
+## Usage Modes
+
+### Dual-Agent Mode (Default)
+Parallel execution of SOP and Policy agents with delta analysis showing differences.
+
+### Specialized Pipeline Mode (Toggle in UI)
+Sequential processing through 5 specialized agents with full observability:
+1. **Intake**: Analyzes intent and applies gating rules
+2. **Search**: Retrieves relevant passages using hybrid search
+3. **Writer**: Drafts response with inline citations
+4. **Reviewer**: Validates grounding and flags issues
+5. **Executor**: Formats final output for display
+
 ## Sample Queries
 
 **For SOP Agent:**
@@ -166,6 +249,15 @@ sop-pp-hackathon/
 **General (Both Respond):**
 - "What's the difference between SOPs and policies?"
 - "How do we maintain regulatory compliance documentation?"
+
+**For Pipeline Mode:**
+Try any of the above queries and observe:
+- Intent classification by IntakeAgent
+- Retrieved passages from SearchAgent
+- Cited response from WriterAgent
+- Grounding validation from ReviewerAgent
+- Final formatted output from ExecutorAgent
+- Full observability metrics (time, tokens, cost per agent)
 
 ## Requirements
 
