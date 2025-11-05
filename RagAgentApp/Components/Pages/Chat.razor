@@ -18,6 +18,12 @@
                     <h5 class="mb-0">Ask a Question</h5>
                 </div>
                 <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <input type="checkbox" @bind="useSpecializedPipeline" disabled="@isProcessing" />
+                            Use Specialized Agent Pipeline (Intake → Search → Writer → Reviewer → Executor)
+                        </label>
+                    </div>
                     <div class="input-group">
                         <input type="text" 
                                class="form-control" 
@@ -60,11 +66,11 @@
             </div>
         }
 
-        <!-- SOP Agent Response -->
+        <!-- SOP Agent Response / Pipeline Response -->
         <div class="col-md-6 mb-4">
             <div class="card h-100">
                 <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">📋 SOP Agent Response</h5>
+                    <h5 class="mb-0">@(useSpecializedPipeline ? "🔄 Pipeline Response" : "📋 SOP Agent Response")</h5>
                 </div>
                 <div class="card-body" style="height: 400px; overflow-y: auto;">
                     @if (!string.IsNullOrEmpty(sopResponse))
@@ -127,38 +133,122 @@
         </div>
 
         <!-- Delta Analysis Section -->
-        <div class="col-12 mb-4">
-            <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">🔍 Orchestrator Delta Analysis</h5>
-                    <small>Comparing differences between SOP and Policy responses</small>
-                </div>
-                <div class="card-body" style="height: 300px; overflow-y: auto;">
-                    @if (!string.IsNullOrEmpty(deltaAnalysis))
-                    {
-                        <div class="delta-analysis">
-                            <div class="delta-content">
-                                @((MarkupString)FormatDeltaAnalysis(deltaAnalysis))
+        @if (!useSpecializedPipeline)
+        {
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">🔍 Orchestrator Delta Analysis</h5>
+                        <small>Comparing differences between SOP and Policy responses</small>
+                    </div>
+                    <div class="card-body" style="height: 300px; overflow-y: auto;">
+                        @if (!string.IsNullOrEmpty(deltaAnalysis))
+                        {
+                            <div class="delta-analysis">
+                                <div class="delta-content">
+                                    @((MarkupString)FormatDeltaAnalysis(deltaAnalysis))
+                                </div>
+                                <small class="text-muted">@deltaTimestamp.ToString("HH:mm:ss")</small>
                             </div>
-                            <small class="text-muted">@deltaTimestamp.ToString("HH:mm:ss")</small>
-                        </div>
-                    }
-                    else if (isAnalyzingDelta)
-                    {
-                        <div class="text-center mt-5">
-                            <div class="spinner-border text-warning" role="status">
-                                <span class="visually-hidden">Analyzing...</span>
+                        }
+                        else if (isAnalyzingDelta)
+                        {
+                            <div class="text-center mt-5">
+                                <div class="spinner-border text-warning" role="status">
+                                    <span class="visually-hidden">Analyzing...</span>
+                                </div>
+                                <p class="text-muted mt-2">Orchestrator is analyzing differences...</p>
                             </div>
-                            <p class="text-muted mt-2">Orchestrator is analyzing differences...</p>
-                        </div>
-                    }
-                    else
-                    {
-                        <p class="text-muted text-center mt-5">Delta analysis will appear here after both agents respond.</p>
-                    }
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center mt-5">Delta analysis will appear here after both agents respond.</p>
+                        }
+                    </div>
                 </div>
             </div>
-        </div>
+        }
+
+        <!-- Observability Section - Pipeline Execution Trace -->
+        @if (useSpecializedPipeline && pipelineTrace != null)
+        {
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">📊 Pipeline Observability</h5>
+                        <small>Trace spans, cost, and time per agent</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-label">Total Duration</div>
+                                    <div class="metric-value">@pipelineTrace.TotalDuration.TotalSeconds.ToString("F2")s</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-label">Total Tokens</div>
+                                    <div class="metric-value">@pipelineTrace.TotalTokensUsed</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-label">Estimated Cost</div>
+                                    <div class="metric-value">$@pipelineTrace.TotalEstimatedCost.ToString("F4")</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-label">Status</div>
+                                    <div class="metric-value">@(pipelineTrace.Success ? "✅ Success" : "❌ Failed")</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h6>Agent Execution Traces:</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Agent</th>
+                                        <th>Duration</th>
+                                        <th>Tokens</th>
+                                        <th>Cost</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var agentTrace in pipelineTrace.AgentTraces)
+                                    {
+                                        <tr>
+                                            <td><strong>@agentTrace.AgentName</strong></td>
+                                            <td>@agentTrace.Duration.TotalMilliseconds.ToString("F0")ms</td>
+                                            <td>@agentTrace.TokensUsed</td>
+                                            <td>$@agentTrace.EstimatedCost.ToString("F4")</td>
+                                            <td>
+                                                @if (agentTrace.Success)
+                                                {
+                                                    <span class="badge bg-success">Success</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger">Failed</span>
+                                                    @if (!string.IsNullOrEmpty(agentTrace.ErrorMessage))
+                                                    {
+                                                        <small class="text-danger">@agentTrace.ErrorMessage</small>
+                                                    }
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 </div>
 
@@ -245,12 +335,34 @@
         font-weight: 600;
         color: #000;
     }
+
+    .metric-card {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        border: 1px solid #dee2e6;
+    }
+
+    .metric-label {
+        font-size: 0.85em;
+        color: #6c757d;
+        font-weight: 500;
+        margin-bottom: 5px;
+    }
+
+    .metric-value {
+        font-size: 1.5em;
+        font-weight: 600;
+        color: #212529;
+    }
 </style>
 
 @code {
     private string userInput = string.Empty;
     private bool isProcessing = false;
     private bool isAnalyzingDelta = false;
+    private bool useSpecializedPipeline = false;
     
     private string currentQuestion = string.Empty;
     private DateTime questionTimestamp = DateTime.Now;
@@ -261,6 +373,8 @@
     
     private string deltaAnalysis = string.Empty;
     private DateTime deltaTimestamp = DateTime.Now;
+    
+    private PipelineExecutionTrace? pipelineTrace = null;
 
     private string FormatDeltaAnalysis(string content)
     {
@@ -402,6 +516,7 @@
         sopResponse = string.Empty;
         policyResponse = string.Empty;
         deltaAnalysis = string.Empty;
+        pipelineTrace = null;
         
         var query = userInput;
         userInput = string.Empty;
@@ -410,46 +525,64 @@
 
         try
         {
-            // Send query to orchestrator agent which calls both SOP and Policy agents
-            var responses = await OrchestratorService.RouteQueryToAgentsAsync(query);
-
-            responseTimestamp = DateTime.Now;
-
-            // Store individual agent responses
-            if (responses.ContainsKey("SOP Agent"))
+            if (useSpecializedPipeline)
             {
-                sopResponse = responses["SOP Agent"];
+                // Use the new specialized agent pipeline
+                var (finalResponse, trace) = await OrchestratorService.ProcessQueryWithPipelineAsync(query);
+                
+                responseTimestamp = DateTime.Now;
+                pipelineTrace = trace;
+                
+                // Display the response in the SOP Agent panel for now
+                sopResponse = finalResponse;
+                policyResponse = "Pipeline mode: See observability metrics below";
+                
+                isProcessing = false;
+                StateHasChanged();
             }
-
-            if (responses.ContainsKey("Policy Agent"))
+            else
             {
-                policyResponse = responses["Policy Agent"];
-            }
+                // Use the original dual-agent approach
+                var responses = await OrchestratorService.RouteQueryToAgentsAsync(query);
 
-            // Update UI with agent responses first
-            isProcessing = false;
-            StateHasChanged();
+                responseTimestamp = DateTime.Now;
 
-            // Now analyze the delta between responses
-            if (!string.IsNullOrEmpty(sopResponse) && !string.IsNullOrEmpty(policyResponse))
-            {
-                isAnalyzingDelta = true;
+                // Store individual agent responses
+                if (responses.ContainsKey("SOP Agent"))
+                {
+                    sopResponse = responses["SOP Agent"];
+                }
+
+                if (responses.ContainsKey("Policy Agent"))
+                {
+                    policyResponse = responses["Policy Agent"];
+                }
+
+                // Update UI with agent responses first
+                isProcessing = false;
                 StateHasChanged();
 
-                try
+                // Now analyze the delta between responses
+                if (!string.IsNullOrEmpty(sopResponse) && !string.IsNullOrEmpty(policyResponse))
                 {
-                    deltaAnalysis = await OrchestratorService.AnalyzeDeltaAsync(query, sopResponse, policyResponse);
-                    deltaTimestamp = DateTime.Now;
-                }
-                catch (Exception deltaEx)
-                {
-                    deltaAnalysis = $"Error analyzing delta: {deltaEx.Message}";
-                    deltaTimestamp = DateTime.Now;
-                }
-                finally
-                {
-                    isAnalyzingDelta = false;
+                    isAnalyzingDelta = true;
                     StateHasChanged();
+
+                    try
+                    {
+                        deltaAnalysis = await OrchestratorService.AnalyzeDeltaAsync(query, sopResponse, policyResponse);
+                        deltaTimestamp = DateTime.Now;
+                    }
+                    catch (Exception deltaEx)
+                    {
+                        deltaAnalysis = $"Error analyzing delta: {deltaEx.Message}";
+                        deltaTimestamp = DateTime.Now;
+                    }
+                    finally
+                    {
+                        isAnalyzingDelta = false;
+                        StateHasChanged();
+                    }
                 }
             }
         }
