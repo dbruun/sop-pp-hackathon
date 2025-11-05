@@ -59,6 +59,47 @@ builder.Services.AddSingleton<PolicyRagAgent>(sp =>
     return new PolicyRagAgent(agentsClient, settings.ModelDeploymentName, logger, settings.PolicyAgentId);
 });
 
+// Register new specialized agents for the pipeline
+builder.Services.AddSingleton<IntakeAgent>(sp =>
+{
+    var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
+    var settings = sp.GetRequiredService<AzureAISettings>();
+    var logger = sp.GetRequiredService<ILogger<IntakeAgent>>();
+    return new IntakeAgent(agentsClient, settings.ModelDeploymentName, logger);
+});
+
+builder.Services.AddSingleton<SearchAgent>(sp =>
+{
+    var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
+    var settings = sp.GetRequiredService<AzureAISettings>();
+    var logger = sp.GetRequiredService<ILogger<SearchAgent>>();
+    return new SearchAgent(agentsClient, settings.ModelDeploymentName, logger);
+});
+
+builder.Services.AddSingleton<WriterAgent>(sp =>
+{
+    var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
+    var settings = sp.GetRequiredService<AzureAISettings>();
+    var logger = sp.GetRequiredService<ILogger<WriterAgent>>();
+    return new WriterAgent(agentsClient, settings.ModelDeploymentName, logger);
+});
+
+builder.Services.AddSingleton<ReviewerAgent>(sp =>
+{
+    var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
+    var settings = sp.GetRequiredService<AzureAISettings>();
+    var logger = sp.GetRequiredService<ILogger<ReviewerAgent>>();
+    return new ReviewerAgent(agentsClient, settings.ModelDeploymentName, logger);
+});
+
+builder.Services.AddSingleton<ExecutorAgent>(sp =>
+{
+    var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
+    var settings = sp.GetRequiredService<AzureAISettings>();
+    var logger = sp.GetRequiredService<ILogger<ExecutorAgent>>();
+    return new ExecutorAgent(agentsClient, settings.ModelDeploymentName, logger);
+});
+
 // Register orchestrator service as singleton (it's now an agent itself with function calling)
 builder.Services.AddSingleton<OrchestratorService>(sp =>
 {
@@ -66,8 +107,23 @@ builder.Services.AddSingleton<OrchestratorService>(sp =>
     var settings = sp.GetRequiredService<AzureAISettings>();
     var sopAgent = sp.GetRequiredService<SopRagAgent>();
     var policyAgent = sp.GetRequiredService<PolicyRagAgent>();
+    var intakeAgent = sp.GetRequiredService<IntakeAgent>();
+    var searchAgent = sp.GetRequiredService<SearchAgent>();
+    var writerAgent = sp.GetRequiredService<WriterAgent>();
+    var reviewerAgent = sp.GetRequiredService<ReviewerAgent>();
+    var executorAgent = sp.GetRequiredService<ExecutorAgent>();
     var logger = sp.GetRequiredService<ILogger<OrchestratorService>>();
-    return new OrchestratorService(agentsClient, settings.ModelDeploymentName, sopAgent, policyAgent, logger);
+    return new OrchestratorService(
+        agentsClient, 
+        settings.ModelDeploymentName, 
+        sopAgent, 
+        policyAgent, 
+        intakeAgent, 
+        searchAgent, 
+        writerAgent, 
+        reviewerAgent, 
+        executorAgent, 
+        logger);
 });
 
 var app = builder.Build();
