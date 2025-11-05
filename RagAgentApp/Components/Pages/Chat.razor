@@ -125,6 +125,40 @@
                 </div>
             </div>
         </div>
+
+        <!-- Delta Analysis Section -->
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">🔍 Orchestrator Delta Analysis</h5>
+                    <small>Comparing differences between SOP and Policy responses</small>
+                </div>
+                <div class="card-body" style="height: 300px; overflow-y: auto;">
+                    @if (!string.IsNullOrEmpty(deltaAnalysis))
+                    {
+                        <div class="delta-analysis">
+                            <div class="delta-content">
+                                @((MarkupString)FormatDeltaAnalysis(deltaAnalysis))
+                            </div>
+                            <small class="text-muted">@deltaTimestamp.ToString("HH:mm:ss")</small>
+                        </div>
+                    }
+                    else if (isAnalyzingDelta)
+                    {
+                        <div class="text-center mt-5">
+                            <div class="spinner-border text-warning" role="status">
+                                <span class="visually-hidden">Analyzing...</span>
+                            </div>
+                            <p class="text-muted mt-2">Orchestrator is analyzing differences...</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center mt-5">Delta analysis will appear here after both agents respond.</p>
+                    }
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -141,11 +175,82 @@
         word-wrap: break-word;
         line-height: 1.6;
     }
+
+    .delta-analysis {
+        padding: 15px;
+        border-radius: 8px;
+        background-color: #fff8e1;
+        border-left: 4px solid #ffc107;
+    }
+
+    .delta-content {
+        line-height: 1.6;
+    }
+
+    .delta-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+        background-color: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .delta-content table th {
+        background-color: #ffc107;
+        color: #000;
+        font-weight: 600;
+        padding: 12px;
+        text-align: left;
+        border: 1px solid #ddd;
+    }
+
+    .delta-content table td {
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        vertical-align: top;
+    }
+
+    .delta-content table tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+    .delta-content table tr:hover {
+        background-color: #fff3cd;
+    }
+
+    .delta-content h1, .delta-content h2, .delta-content h3 {
+        margin-top: 15px;
+        margin-bottom: 10px;
+        color: #333;
+    }
+
+    .delta-content h1 { font-size: 1.5em; font-weight: 600; }
+    .delta-content h2 { font-size: 1.3em; font-weight: 600; }
+    .delta-content h3 { font-size: 1.1em; font-weight: 600; }
+
+    .delta-content ul, .delta-content ol {
+        margin: 10px 0;
+        padding-left: 25px;
+    }
+
+    .delta-content li {
+        margin: 5px 0;
+    }
+
+    .delta-content p {
+        margin: 10px 0;
+    }
+
+    .delta-content strong {
+        font-weight: 600;
+        color: #000;
+    }
 </style>
 
 @code {
     private string userInput = string.Empty;
     private bool isProcessing = false;
+    private bool isAnalyzingDelta = false;
     
     private string currentQuestion = string.Empty;
     private DateTime questionTimestamp = DateTime.Now;
@@ -153,6 +258,159 @@
     private string sopResponse = string.Empty;
     private string policyResponse = string.Empty;
     private DateTime responseTimestamp = DateTime.Now;
+    
+    private string deltaAnalysis = string.Empty;
+    private DateTime deltaTimestamp = DateTime.Now;
+
+    private string FormatDeltaAnalysis(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return string.Empty;
+
+        // Convert markdown-style tables to HTML tables
+        var lines = content.Split('\n');
+        var result = new System.Text.StringBuilder();
+        var inTable = false;
+        var isHeaderRow = false;
+        var inList = false;
+
+        foreach (var line in lines)
+        {
+            var trimmedLine = line.Trim();
+
+            // Check if this is a table row
+            if (trimmedLine.StartsWith("|") && trimmedLine.EndsWith("|"))
+            {
+                // Close list if we were in one
+                if (inList)
+                {
+                    result.Append("</ul>");
+                    inList = false;
+                }
+
+                if (!inTable)
+                {
+                    result.Append("<table>");
+                    inTable = true;
+                    isHeaderRow = true;
+                }
+
+                // Skip separator rows (e.g., |---|---|)
+                if (trimmedLine.Contains("---"))
+                {
+                    continue;
+                }
+
+                // Parse table cells
+                var cells = trimmedLine.Split('|')
+                    .Where(c => !string.IsNullOrWhiteSpace(c))
+                    .Select(c => c.Trim())
+                    .ToArray();
+
+                if (isHeaderRow)
+                {
+                    result.Append("<tr>");
+                    foreach (var cell in cells)
+                    {
+                        result.Append($"<th>{System.Web.HttpUtility.HtmlEncode(cell)}</th>");
+                    }
+                    result.Append("</tr>");
+                    isHeaderRow = false;
+                }
+                else
+                {
+                    result.Append("<tr>");
+                    foreach (var cell in cells)
+                    {
+                        result.Append($"<td>{System.Web.HttpUtility.HtmlEncode(cell)}</td>");
+                    }
+                    result.Append("</tr>");
+                }
+            }
+            else
+            {
+                // Close table if we were in one
+                if (inTable)
+                {
+                    result.Append("</table>");
+                    inTable = false;
+                }
+
+                // Handle markdown headers
+                if (trimmedLine.StartsWith("###"))
+                {
+                    // Close list if we were in one
+                    if (inList)
+                    {
+                        result.Append("</ul>");
+                        inList = false;
+                    }
+                    var headerText = trimmedLine.Substring(3).Trim();
+                    result.Append($"<h3>{System.Web.HttpUtility.HtmlEncode(headerText)}</h3>");
+                }
+                else if (trimmedLine.StartsWith("##"))
+                {
+                    // Close list if we were in one
+                    if (inList)
+                    {
+                        result.Append("</ul>");
+                        inList = false;
+                    }
+                    var headerText = trimmedLine.Substring(2).Trim();
+                    result.Append($"<h2>{System.Web.HttpUtility.HtmlEncode(headerText)}</h2>");
+                }
+                else if (trimmedLine.StartsWith("#"))
+                {
+                    // Close list if we were in one
+                    if (inList)
+                    {
+                        result.Append("</ul>");
+                        inList = false;
+                    }
+                    var headerText = trimmedLine.Substring(1).Trim();
+                    result.Append($"<h1>{System.Web.HttpUtility.HtmlEncode(headerText)}</h1>");
+                }
+                else if (!string.IsNullOrWhiteSpace(trimmedLine))
+                {
+                    // Handle list items
+                    if (trimmedLine.StartsWith("- ") || trimmedLine.StartsWith("* "))
+                    {
+                        if (!inList)
+                        {
+                            result.Append("<ul>");
+                            inList = true;
+                        }
+                        var listText = trimmedLine.Substring(2).Trim();
+                        result.Append($"<li>{System.Web.HttpUtility.HtmlEncode(listText)}</li>");
+                    }
+                    else
+                    {
+                        // Close list if we were in one
+                        if (inList)
+                        {
+                            result.Append("</ul>");
+                            inList = false;
+                        }
+                        result.Append($"<p>{System.Web.HttpUtility.HtmlEncode(trimmedLine)}</p>");
+                    }
+                }
+            }
+        }
+
+        // Close table if still open
+        if (inTable)
+        {
+            result.Append("</table>");
+        }
+
+        // Close list if still open
+        if (inList)
+        {
+            result.Append("</ul>");
+        }
+
+        return result.ToString();
+    }
 
     private async Task HandleKeyPress(KeyboardEventArgs e)
     {
@@ -174,6 +432,7 @@
         questionTimestamp = DateTime.Now;
         sopResponse = string.Empty;
         policyResponse = string.Empty;
+        deltaAnalysis = string.Empty;
         
         var query = userInput;
         userInput = string.Empty;
@@ -196,6 +455,33 @@
             if (responses.ContainsKey("Policy Agent"))
             {
                 policyResponse = responses["Policy Agent"];
+            }
+
+            // Update UI with agent responses first
+            isProcessing = false;
+            StateHasChanged();
+
+            // Now analyze the delta between responses
+            if (!string.IsNullOrEmpty(sopResponse) && !string.IsNullOrEmpty(policyResponse))
+            {
+                isAnalyzingDelta = true;
+                StateHasChanged();
+
+                try
+                {
+                    deltaAnalysis = await OrchestratorService.AnalyzeDeltaAsync(query, sopResponse, policyResponse);
+                    deltaTimestamp = DateTime.Now;
+                }
+                catch (Exception deltaEx)
+                {
+                    deltaAnalysis = $"Error analyzing delta: {deltaEx.Message}";
+                    deltaTimestamp = DateTime.Now;
+                }
+                finally
+                {
+                    isAnalyzingDelta = false;
+                    StateHasChanged();
+                }
             }
         }
         catch (Exception ex)
