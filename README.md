@@ -1,20 +1,18 @@
 # SOP-PP-Hackathon
 
-RAG Agent System for Standard Operating Procedures and Policy Management
+RAG Agent Pipeline System
 
 ## Overview
 
-This repository contains a .NET Blazor web application that implements a dual-agent RAG (Retrieval-Augmented Generation) system using Azure AI Agent Service and Azure AI Foundry. The application features two specialized AI agents that simultaneously answer user queries:
+This repository contains a .NET Blazor web application that implements a specialized agent pipeline using Azure AI Agent Service and Azure AI Foundry. The application features a 5-stage processing pipeline with full observability:
 
-- **SOP Agent**: Expert in Standard Operating Procedures, work instructions, and process documentation
-- **Policy Agent**: Expert in company policies, regulations, and compliance requirements
+**Pipeline Flow**: Intake → Search → Writer → Reviewer → Executor
 
 ## Features
 
 ### Core Features
-- 🤖 **Dual Agent Architecture**: Questions are routed to both agents via orchestrator with function calling
-- 🔄 **Specialized Agent Pipeline**: New mode with 5-stage processing (Intake → Search → Writer → Reviewer → Executor)
-- 💬 **Interactive Chat Interface**: Real-time responses in separate panels for each agent
+- 🔄 **Specialized Agent Pipeline**: 5-stage processing with observability
+- 💬 **Interactive Chat Interface**: Real-time responses with execution metrics
 - 🔐 **Entra ID Authentication**: Keyless authentication via DefaultAzureCredential (recommended)
 - 🐳 **Container-Ready**: Fully dockerized for easy deployment
 - ☁️ **Azure Container Apps Support**: Deploy to Azure with managed identity support
@@ -50,39 +48,7 @@ See the [RagAgentApp/README.md](RagAgentApp/README.md) for detailed setup and us
 
 ## Architecture
 
-### Dual-Agent Mode (Original)
-
-```
-┌─────────────────────┐
-│     User (Browser)  │
-│   Blazor Interface  │
-└──────────┬──────────┘
-           │
-           ▼
-┌──────────────────────┐
-│   Orchestrator       │
-│   Service            │
-└──────────┬───────────┘
-           │
-     ┌─────┴─────┐
-     │           │
-     ▼           ▼
-┌─────────┐ ┌──────────┐
-│   SOP   │ │  Policy  │
-│  Agent  │ │  Agent   │
-└────┬────┘ └────┬─────┘
-     │           │
-     └─────┬─────┘
-           ▼
-┌──────────────────────┐
-│  Azure AI Foundry    │
-│  • Agent Service     │
-│  • Azure OpenAI      │
-│  • Thread Management │
-└──────────────────────┘
-```
-
-### Specialized Pipeline Mode (New)
+### Specialized Pipeline
 
 ```
 ┌─────────────────────┐
@@ -182,8 +148,6 @@ sop-pp-hackathon/
 ├── QUICKSTART.md               # 5-minute quick start
 ├── RagAgentApp/
 │   ├── Agents/                 # Agent implementations
-│   │   ├── SopRagAgent.cs      # Original SOP agent
-│   │   ├── PolicyRagAgent.cs   # Original Policy agent
 │   │   ├── IntakeAgent.cs      # Intent & policy gating
 │   │   ├── SearchAgent.cs      # Hybrid retrieval
 │   │   ├── WriterAgent.cs      # Response drafting
@@ -193,7 +157,7 @@ sop-pp-hackathon/
 │   │   └── Pages/
 │   │       └── Chat.razor      # Main chat interface
 │   ├── Services/
-│   │   └── OrchestratorService.cs  # Dual-mode orchestration
+│   │   └── OrchestratorService.cs  # Pipeline orchestration
 │   ├── Models/
 │   │   ├── AgentExecutionTrace.cs  # Observability models
 │   │   └── AzureAISettings.cs      # Configuration
@@ -217,18 +181,14 @@ sop-pp-hackathon/
 
 ## What Makes This Special
 
-- **True Parallel Execution**: Both agents process simultaneously (time = max(agent1, agent2), not sum)
+- **Observable Agent Pipeline**: Full visibility into each agent's execution with time, cost, and token metrics
 - **Persistent Agent Architecture**: Agents stored in Azure AI Foundry, no duplicate creation
 - **Thread Reuse Pattern**: Efficient conversation management with cached thread IDs
 - **Keyless Security**: Uses Managed Identity and DefaultAzureCredential (no API keys!)
 - **Production-Ready**: Container-ready, auto-scaling, comprehensive error handling
 
-## Usage Modes
+## Pipeline Processing
 
-### Dual-Agent Mode (Default)
-Parallel execution of SOP and Policy agents with delta analysis showing differences.
-
-### Specialized Pipeline Mode (Toggle in UI)
 Sequential processing through 5 specialized agents with full observability:
 1. **Intake**: Analyzes intent and applies gating rules
 2. **Search**: Retrieves relevant passages using hybrid search
@@ -238,20 +198,13 @@ Sequential processing through 5 specialized agents with full observability:
 
 ## Sample Queries
 
-**For SOP Agent:**
+Try these queries and observe the full pipeline execution:
 - "What are the key components of a standard operating procedure?"
 - "How do I document a new process workflow?"
-
-**For Policy Agent:**
-- "What are the main elements of a data privacy policy?"
-- "How should we handle compliance violations?"
-
-**General (Both Respond):**
 - "What's the difference between SOPs and policies?"
 - "How do we maintain regulatory compliance documentation?"
 
-**For Pipeline Mode:**
-Try any of the above queries and observe:
+After each query, you'll see:
 - Intent classification by IntakeAgent
 - Retrieved passages from SearchAgent
 - Cited response from WriterAgent

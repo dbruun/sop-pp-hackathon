@@ -1,13 +1,13 @@
 # Quick Start Guide
 
-Get the RAG Agent System up and running in **5 minutes**!
+Get the RAG Agent Pipeline System up and running in **5 minutes**!
 
 ## What You'll Build
 
-A dual-agent chat system where:
-- 🤖 **SOP Agent** answers questions about Standard Operating Procedures
-- 📜 **Policy Agent** answers questions about policies and compliance
-- Both agents respond **simultaneously** to every question
+A specialized agent pipeline system where:
+- 🔄 **5-stage processing**: Intake → Search → Writer → Reviewer → Executor
+- 📊 **Full observability**: Track time, tokens, and cost per agent
+- 💬 **Real-time responses**: See the pipeline execute in real-time
 
 ## Prerequisites
 
@@ -137,31 +137,28 @@ Open your browser to: **http://localhost:8080**
 
 ---
 
-## Step 5: Test the Agents
+## Step 5: Test the Pipeline
 
 1. Click on **"Start Chatting"** or go to `/chat`
 2. Type a question like: **"What are the key components of a good SOP?"**
 3. Press **Enter** or click **Send**
-4. Watch both agents respond:
-   - **Left panel**: SOP Agent's response
-   - **Right panel**: Policy Agent's response
+4. Watch the pipeline process your query through 5 stages:
+   - **Intake**: Intent detection and gating
+   - **Search**: Hybrid retrieval (BM25 + vector)
+   - **Writer**: Response drafting with citations
+   - **Reviewer**: Grounding validation
+   - **Executor**: Final output formatting
+5. View the observability metrics showing execution time, tokens, and cost per agent
 
 ### Try These Sample Questions
 
-**For SOP Agent:**
 - "What should be included in a standard operating procedure?"
 - "How do I create an effective work instruction?"
 - "What's the difference between a procedure and a process?"
-
-**For Policy Agent:**
 - "What are common elements in a data privacy policy?"
 - "How should we handle policy violations?"
-- "What's the purpose of a compliance framework?"
-
-**General Questions (Both respond):**
 - "How do SOPs and policies differ?"
 - "What documentation is required for regulatory compliance?"
-- "Explain the approval process for new procedures"
 
 ---
 
@@ -206,7 +203,7 @@ docker-compose logs
 - 🐛 [Report Issues](https://github.com/dbruun/sop-pp-hackathon/issues)
 
 ### Customize
-1. **Modify Agent Prompts**: Edit `Agents/SopRagAgent.cs` and `Agents/PolicyRagAgent.cs`
+1. **Modify Agent Prompts**: Edit agent files in `Agents/` directory
 2. **Add More Agents**: Implement `IAgentService` interface
 3. **Change UI**: Edit `Components/Pages/Chat.razor`
 4. **Add RAG**: Integrate Azure AI Search or file uploads
@@ -221,18 +218,19 @@ Follow the [Deployment Guide](RagAgentApp/docs/GUIDE.md#azure-deployment) to dep
 ```
 User Question
      ↓
- Orchestrator (parallel)
+Pipeline Orchestrator
      ↓
-  ┌──┴──┐
-  ↓     ↓
-SOP   Policy
-Agent  Agent
-  ↓     ↓
-  └──┬──┘
+  Intake (Intent)
      ↓
- Azure OpenAI
+  Search (Retrieval)
      ↓
-Two Responses
+  Writer (Draft + Citations)
+     ↓
+  Reviewer (Validation)
+     ↓
+  Executor (Format)
+     ↓
+Final Response + Metrics
 ```
 
 ---
@@ -240,9 +238,9 @@ Two Responses
 ## Performance Tips
 
 - **First Query**: May take 5-10 seconds (agent initialization)
-- **Subsequent Queries**: 2-5 seconds (threads reused)
-- **Parallel Processing**: Both agents run simultaneously
-- **Token Usage**: Each query uses tokens for both agents
+- **Subsequent Queries**: 3-7 seconds (pipeline execution)
+- **Sequential Processing**: Each agent processes in order with full observability
+- **Token Usage**: Tracks usage and cost per agent in the pipeline
 
 ---
 
@@ -255,6 +253,6 @@ Two Responses
 
 ---
 
-**Congratulations!** 🎉 You now have a working dual-agent RAG system!
+**Congratulations!** 🎉 You now have a working specialized agent pipeline with full observability!
 
 For advanced features, check out the [Complete Guide](RagAgentApp/docs/GUIDE.md).
