@@ -21,8 +21,6 @@ var azureAISettings = builder.Configuration.GetSection("AzureAI").Get<AzureAISet
 azureAISettings.ProjectEndpoint = builder.Configuration["AZURE_AI_PROJECT_ENDPOINT"] ?? azureAISettings.ProjectEndpoint;
 azureAISettings.ModelDeploymentName = builder.Configuration["AZURE_AI_MODEL_DEPLOYMENT_NAME"] ?? azureAISettings.ModelDeploymentName;
 azureAISettings.ConnectionString = builder.Configuration["AZURE_AI_CONNECTION_STRING"] ?? azureAISettings.ConnectionString;
-azureAISettings.SopAgentId = builder.Configuration["AZURE_AI_SOP_AGENT_ID"] ?? azureAISettings.SopAgentId;
-azureAISettings.PolicyAgentId = builder.Configuration["AZURE_AI_POLICY_AGENT_ID"] ?? azureAISettings.PolicyAgentId;
 azureAISettings.ApiKey = builder.Configuration["AZURE_AI_API_KEY"] ?? azureAISettings.ApiKey;
 
 // Register PersistentAgentsClient (v1.1.0 API with Azure.AI.Agents.Persistent)
@@ -41,23 +39,6 @@ builder.Services.AddSingleton<PersistentAgentsClient>(sp =>
 
 // Register Azure AI settings as singleton
 builder.Services.AddSingleton(azureAISettings);
-
-// Register agents as singleton services to maintain thread continuity across requests
-builder.Services.AddSingleton<SopRagAgent>(sp =>
-{
-    var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
-    var settings = sp.GetRequiredService<AzureAISettings>();
-    var logger = sp.GetRequiredService<ILogger<SopRagAgent>>();
-    return new SopRagAgent(agentsClient, settings.ModelDeploymentName, logger, settings.SopAgentId);
-});
-
-builder.Services.AddSingleton<PolicyRagAgent>(sp =>
-{
-    var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
-    var settings = sp.GetRequiredService<AzureAISettings>();
-    var logger = sp.GetRequiredService<ILogger<PolicyRagAgent>>();
-    return new PolicyRagAgent(agentsClient, settings.ModelDeploymentName, logger, settings.PolicyAgentId);
-});
 
 // Register new specialized agents for the pipeline
 builder.Services.AddSingleton<IntakeAgent>(sp =>
@@ -100,13 +81,11 @@ builder.Services.AddSingleton<ExecutorAgent>(sp =>
     return new ExecutorAgent(agentsClient, settings.ModelDeploymentName, logger);
 });
 
-// Register orchestrator service as singleton (it's now an agent itself with function calling)
+// Register orchestrator service as singleton
 builder.Services.AddSingleton<OrchestratorService>(sp =>
 {
     var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
     var settings = sp.GetRequiredService<AzureAISettings>();
-    var sopAgent = sp.GetRequiredService<SopRagAgent>();
-    var policyAgent = sp.GetRequiredService<PolicyRagAgent>();
     var intakeAgent = sp.GetRequiredService<IntakeAgent>();
     var searchAgent = sp.GetRequiredService<SearchAgent>();
     var writerAgent = sp.GetRequiredService<WriterAgent>();
@@ -116,8 +95,6 @@ builder.Services.AddSingleton<OrchestratorService>(sp =>
     return new OrchestratorService(
         agentsClient, 
         settings.ModelDeploymentName, 
-        sopAgent, 
-        policyAgent, 
         intakeAgent, 
         searchAgent, 
         writerAgent, 
