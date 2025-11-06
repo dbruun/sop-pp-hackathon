@@ -67,70 +67,80 @@
         }
 
         <!-- SOP Agent Response / Pipeline Response -->
-        <div class="col-md-6 mb-4">
+        <div class="@(useSpecializedPipeline ? "col-12" : "col-md-6") mb-4">
             <div class="card h-100">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">@(useSpecializedPipeline ? "🔄 Pipeline Response" : "📋 SOP Agent Response")</h5>
                 </div>
-                <div class="card-body" style="height: 400px; overflow-y: auto;">
+                <div class="card-body response-body">
                     @if (!string.IsNullOrEmpty(sopResponse))
                     {
-                        <div class="agent-response">
-                            <div class="response-content">
-                                @sopResponse
+                        <div class="@(useSpecializedPipeline ? "pipeline-response-content" : "agent-response-content")">
+                            <div class="response-text">
+                                @((MarkupString)FormatResponseContent(sopResponse))
                             </div>
-                            <small class="text-muted">@responseTimestamp.ToString("HH:mm:ss")</small>
+                            <div class="response-footer">
+                                <span class="timestamp-badge">
+                                    <i class="bi bi-clock"></i> @responseTimestamp.ToString("HH:mm:ss")
+                                </span>
+                            </div>
                         </div>
                     }
                     else if (isProcessing)
                     {
-                        <div class="text-center mt-5">
+                        <div class="loading-state">
                             <div class="spinner-border text-success" role="status">
                                 <span class="visually-hidden">Loading...</span>
                             </div>
-                            <p class="text-muted mt-2">SOP Agent is thinking...</p>
+                            <p class="loading-text">@(useSpecializedPipeline ? "Pipeline executing..." : "SOP Agent is thinking...")</p>
                         </div>
                     }
                     else
                     {
-                        <p class="text-muted text-center mt-5">No response yet. Ask a question to get started!</p>
+                        <div class="empty-state">
+                            <div class="empty-icon">💬</div>
+                            <p class="empty-text">No response yet. Ask a question to get started!</p>
+                        </div>
                     }
                 </div>
             </div>
         </div>
 
-        <!-- Policy Agent Response -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">📜 Policy Agent Response</h5>
-                </div>
-                <div class="card-body" style="height: 400px; overflow-y: auto;">
-                    @if (!string.IsNullOrEmpty(policyResponse))
-                    {
-                        <div class="agent-response">
-                            <div class="response-content">
-                                @policyResponse
+        <!-- Policy Agent Response (Hidden when using pipeline) -->
+        @if (!useSpecializedPipeline)
+        {
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">📜 Policy Agent Response</h5>
+                    </div>
+                    <div class="card-body" style="height: 400px; overflow-y: auto;">
+                        @if (!string.IsNullOrEmpty(policyResponse))
+                        {
+                            <div class="agent-response">
+                                <div class="response-content">
+                                    @policyResponse
+                                </div>
+                                <small class="text-muted">@responseTimestamp.ToString("HH:mm:ss")</small>
                             </div>
-                            <small class="text-muted">@responseTimestamp.ToString("HH:mm:ss")</small>
-                        </div>
-                    }
-                    else if (isProcessing)
-                    {
-                        <div class="text-center mt-5">
-                            <div class="spinner-border text-info" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                        }
+                        else if (isProcessing)
+                        {
+                            <div class="text-center mt-5">
+                                <div class="spinner-border text-info" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="text-muted mt-2">Policy Agent is thinking...</p>
                             </div>
-                            <p class="text-muted mt-2">Policy Agent is thinking...</p>
-                        </div>
-                    }
-                    else
-                    {
-                        <p class="text-muted text-center mt-5">No response yet. Ask a question to get started!</p>
-                    }
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center mt-5">No response yet. Ask a question to get started!</p>
+                        }
+                    </div>
                 </div>
             </div>
-        </div>
+        }
 
         <!-- Delta Analysis Section -->
         @if (!useSpecializedPipeline)
@@ -206,9 +216,9 @@
                             </div>
                         </div>
                         
-                        <h6>Agent Execution Traces:</h6>
+                        <h6 class="mb-3 mt-3">Agent Execution Traces:</h6>
                         <div class="table-responsive">
-                            <table class="table table-sm table-striped">
+                            <table class="pipeline-trace-table">
                                 <thead>
                                     <tr>
                                         <th>Agent</th>
@@ -221,22 +231,31 @@
                                 <tbody>
                                     @foreach (var agentTrace in pipelineTrace.AgentTraces)
                                     {
-                                        <tr>
-                                            <td><strong>@agentTrace.AgentName</strong></td>
-                                            <td>@agentTrace.Duration.TotalMilliseconds.ToString("F0")ms</td>
-                                            <td>@agentTrace.TokensUsed</td>
-                                            <td>$@agentTrace.EstimatedCost.ToString("F4")</td>
-                                            <td>
+                                        <tr class="@(agentTrace.Success ? "trace-success" : "trace-failed")">
+                                            <td class="agent-name-cell">
+                                                <span class="agent-icon">🤖</span>
+                                                <strong>@agentTrace.AgentName</strong>
+                                            </td>
+                                            <td class="duration-cell">
+                                                <span class="metric-badge duration-badge">@agentTrace.Duration.TotalMilliseconds.ToString("F0")ms</span>
+                                            </td>
+                                            <td class="tokens-cell">
+                                                <span class="metric-badge tokens-badge">@agentTrace.TokensUsed</span>
+                                            </td>
+                                            <td class="cost-cell">
+                                                <span class="metric-badge cost-badge">$@agentTrace.EstimatedCost.ToString("F4")</span>
+                                            </td>
+                                            <td class="status-cell">
                                                 @if (agentTrace.Success)
                                                 {
-                                                    <span class="badge bg-success">Success</span>
+                                                    <span class="status-badge success-badge">✓ Success</span>
                                                 }
                                                 else
                                                 {
-                                                    <span class="badge bg-danger">Failed</span>
+                                                    <span class="status-badge failed-badge">✗ Failed</span>
                                                     @if (!string.IsNullOrEmpty(agentTrace.ErrorMessage))
                                                     {
-                                                        <small class="text-danger">@agentTrace.ErrorMessage</small>
+                                                        <div><small class="error-message">@agentTrace.ErrorMessage</small></div>
                                                     }
                                                 }
                                             </td>
@@ -337,26 +356,383 @@
     }
 
     .metric-card {
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        padding: 15px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+        padding: 20px;
         text-align: center;
-        border: 1px solid #dee2e6;
+        border: 2px solid #dee2e6;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     }
 
     .metric-label {
         font-size: 0.85em;
         color: #6c757d;
-        font-weight: 500;
-        margin-bottom: 5px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
     .metric-value {
-        font-size: 1.5em;
-        font-weight: 600;
+        font-size: 1.8em;
+        font-weight: 700;
         color: #212529;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    /* Pipeline Trace Table Styles */
+    .pipeline-trace-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background-color: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .pipeline-trace-table thead {
+        background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+        color: white;
+    }
+
+    .pipeline-trace-table thead th {
+        padding: 14px 16px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.9em;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 3px solid #28a745;
+    }
+
+    .pipeline-trace-table tbody tr {
+        transition: all 0.2s ease;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .pipeline-trace-table tbody tr:hover {
+        background-color: #f8f9fa;
+        transform: scale(1.01);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .pipeline-trace-table tbody tr.trace-success {
+        border-left: 4px solid #28a745;
+    }
+
+    .pipeline-trace-table tbody tr.trace-failed {
+        border-left: 4px solid #dc3545;
+        background-color: #fff5f5;
+    }
+
+    .pipeline-trace-table tbody td {
+        padding: 14px 16px;
+        vertical-align: middle;
+    }
+
+    .agent-name-cell {
+        font-size: 1em;
+        min-width: 180px;
+    }
+
+    .agent-icon {
+        margin-right: 8px;
+        font-size: 1.2em;
+    }
+
+    .metric-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.9em;
+        font-family: 'Consolas', 'Monaco', monospace;
+    }
+
+    .duration-badge {
+        background-color: #e3f2fd;
+        color: #1565c0;
+        border: 1px solid #90caf9;
+    }
+
+    .tokens-badge {
+        background-color: #f3e5f5;
+        color: #6a1b9a;
+        border: 1px solid #ce93d8;
+    }
+
+    .cost-badge {
+        background-color: #fff3e0;
+        color: #e65100;
+        border: 1px solid #ffb74d;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85em;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .success-badge {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .failed-badge {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .error-message {
+        color: #dc3545;
+        font-style: italic;
+        margin-top: 4px;
+        display: block;
+    }
+
+    .duration-cell, .tokens-cell, .cost-cell {
+        text-align: center;
+    }
+
+    .status-cell {
+        text-align: center;
+        min-width: 120px;
+    }
+
+    /* Enhanced Response Box Styles */
+    .response-body {
+        height: 400px;
+        overflow-y: auto;
+        background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
+        padding: 0;
+    }
+
+    .pipeline-response-content, .agent-response-content {
+        padding: 24px;
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .pipeline-response-content {
+        background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+        border-left: 4px solid #4caf50;
+    }
+
+    .agent-response-content {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-left: 4px solid #28a745;
+    }
+
+    .response-text {
+        flex: 1;
+        font-size: 1.05em;
+        line-height: 1.7;
+        color: #212529;
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 16px;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    .agent-separator {
+        height: 2px;
+        background: linear-gradient(to right, transparent, #4caf50, transparent);
+        margin: 8px 0;
+        border-radius: 2px;
+        box-shadow: 0 1px 2px rgba(76, 175, 80, 0.2);
+    }
+
+    .agent-section-wrapper {
+        margin: 0 0 4px 0;
+    }
+
+    .agent-header {
+        background: linear-gradient(135deg, #2e7d32 0%, #4caf50 100%);
+        color: white;
+        padding: 10px 16px;
+        margin: 0 -20px;
+        font-size: 1.2em;
+        font-weight: 700;
+        border-left: 5px solid #1b5e20;
+        box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.3s ease;
+    }
+
+    .agent-header:hover {
+        background: linear-gradient(135deg, #388e3c 0%, #66bb6a 100%);
+        box-shadow: 0 3px 10px rgba(46, 125, 50, 0.4);
+    }
+
+    .agent-header.collapsible .collapse-icon {
+        font-size: 0.8em;
+        transition: transform 0.3s ease;
+        display: inline-block;
+    }
+
+    .agent-header.collapsed .collapse-icon {
+        transform: rotate(-90deg);
+    }
+
+    .agent-content {
+        padding: 12px 0 8px 0;
+        max-height: 5000px;
+        overflow: hidden;
+        transition: max-height 0.3s ease, opacity 0.3s ease;
+        opacity: 1;
+    }
+
+    .agent-content.collapsed {
+        max-height: 0;
+        opacity: 0;
+        padding: 0;
+    }
+
+    .section-header {
+        color: #2e7d32;
+        font-weight: 600;
+        margin-top: 10px;
+        margin-bottom: 8px;
+        font-size: 1.2em;
+        border-bottom: 2px solid #4caf50;
+        padding-bottom: 4px;
+    }
+
+    .agent-subheader {
+        color: #388e3c;
+        font-weight: 600;
+        margin-top: 10px;
+        margin-bottom: 8px;
+        font-size: 1.1em;
+    }
+
+    .response-text ul, .response-text ol {
+        margin: 8px 0;
+        padding-left: 28px;
+    }
+
+    .response-text li {
+        margin: 4px 0;
+        line-height: 1.5;
+    }
+    
+    .response-text p {
+        margin: 6px 0;
+        line-height: 1.5;
+    }
+
+    .response-text strong {
+        color: #1b5e20;
+        font-weight: 600;
+    }
+
+    .response-text code {
+        background-color: #f5f5f5;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 0.9em;
+        color: #d32f2f;
+    }
+
+    .response-footer {
+        display: flex;
+        justify-content: flex-end;
+        padding-top: 8px;
+        border-top: 1px solid #dee2e6;
+    }
+
+    .timestamp-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 20px;
+        font-size: 0.85em;
+        color: #6c757d;
+        font-weight: 500;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding: 40px;
+    }
+
+    .loading-text {
+        color: #6c757d;
+        margin-top: 16px;
+        font-size: 1.05em;
+        font-weight: 500;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding: 40px;
+    }
+
+    .empty-icon {
+        font-size: 4em;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    .empty-text {
+        color: #6c757d;
+        font-size: 1.05em;
+        text-align: center;
+        margin: 0;
     }
 </style>
+
+<script>
+    function toggleAgentSection(sectionId) {
+        const content = document.getElementById(sectionId);
+        const icon = document.getElementById(sectionId + '-icon');
+        const header = content.previousElementSibling;
+        
+        if (content.classList.contains('collapsed')) {
+            content.classList.remove('collapsed');
+            header.classList.remove('collapsed');
+            icon.textContent = '▼';
+        } else {
+            content.classList.add('collapsed');
+            header.classList.add('collapsed');
+            icon.textContent = '▶';
+        }
+    }
+</script>
 
 @code {
     private string userInput = string.Empty;
@@ -375,6 +751,120 @@
     private DateTime deltaTimestamp = DateTime.Now;
     
     private PipelineExecutionTrace? pipelineTrace = null;
+
+    private string FormatResponseContent(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return string.Empty;
+
+        // Format the response content with proper HTML
+        var lines = content.Split('\n');
+        var result = new System.Text.StringBuilder();
+        var agentSectionCounter = 0;
+        var inAgentSection = false;
+        var currentAgentId = "";
+
+        foreach (var line in lines)
+        {
+            var trimmedLine = line.Trim();
+
+            // Format horizontal rules (agent separators) - keep inside agent sections
+            if (trimmedLine == "---" || trimmedLine == "***")
+            {
+                // Only add separator if we're inside an agent section (to show between content)
+                if (inAgentSection)
+                {
+                    result.AppendLine("<div class='agent-separator'></div>");
+                }
+                continue;
+            }
+
+            // Format headers
+            if (trimmedLine.StartsWith("###"))
+            {
+                var text = trimmedLine.Substring(3).Trim();
+                result.AppendLine($"<h4 class='agent-subheader'>{System.Web.HttpUtility.HtmlEncode(text)}</h4>");
+            }
+            else if (trimmedLine.StartsWith("##"))
+            {
+                var text = trimmedLine.Substring(2).Trim();
+                // Check if it's an agent header (contains emoji)
+                if (text.Contains("🤖"))
+                {
+                    // Close previous agent section if open
+                    if (inAgentSection)
+                    {
+                        result.AppendLine("</div></div>"); // Close content and wrapper
+                    }
+                    
+                    // Start new collapsible agent section
+                    agentSectionCounter++;
+                    currentAgentId = $"agent-section-{agentSectionCounter}";
+                    result.AppendLine($"<div class='agent-section-wrapper'>");
+                    result.AppendLine($"<div class='agent-header collapsible' onclick='toggleAgentSection(\"{currentAgentId}\")'>");
+                    result.AppendLine($"<span class='collapse-icon' id='{currentAgentId}-icon'>▼</span>");
+                    result.AppendLine($"<span>{System.Web.HttpUtility.HtmlEncode(text)}</span>");
+                    result.AppendLine($"</div>");
+                    result.AppendLine($"<div class='agent-content' id='{currentAgentId}'>");
+                    inAgentSection = true;
+                }
+                else
+                {
+                    result.AppendLine($"<h3 class='section-header'>{System.Web.HttpUtility.HtmlEncode(text)}</h3>");
+                }
+            }
+            else if (trimmedLine.StartsWith("#"))
+            {
+                var text = trimmedLine.Substring(1).Trim();
+                result.AppendLine($"<h3 class='section-header'>{System.Web.HttpUtility.HtmlEncode(text)}</h3>");
+            }
+            // Format lists
+            else if (trimmedLine.StartsWith("- ") || trimmedLine.StartsWith("* "))
+            {
+                var text = trimmedLine.Substring(2).Trim();
+                result.AppendLine($"<li>{FormatInlineContent(text)}</li>");
+            }
+            else if (trimmedLine.Length > 0 && char.IsDigit(trimmedLine[0]) && trimmedLine.Contains(". "))
+            {
+                var text = trimmedLine.Substring(trimmedLine.IndexOf(". ") + 2).Trim();
+                result.AppendLine($"<li>{FormatInlineContent(text)}</li>");
+            }
+            // Format regular paragraphs
+            else if (!string.IsNullOrEmpty(trimmedLine))
+            {
+                result.AppendLine($"<p>{FormatInlineContent(trimmedLine)}</p>");
+            }
+            else
+            {
+                result.AppendLine("<br/>");
+            }
+        }
+
+        // Close any remaining open agent section
+        if (inAgentSection)
+        {
+            result.AppendLine("</div></div>");
+        }
+
+        return result.ToString();
+    }
+
+    private string FormatInlineContent(string text)
+    {
+        // Format bold text
+        text = System.Text.RegularExpressions.Regex.Replace(
+            System.Web.HttpUtility.HtmlEncode(text),
+            @"\*\*([^*]+)\*\*",
+            "<strong>$1</strong>");
+
+        // Format code snippets
+        text = System.Text.RegularExpressions.Regex.Replace(
+            text,
+            @"`([^`]+)`",
+            "<code>$1</code>");
+
+        return text;
+    }
 
     private string FormatDeltaAnalysis(string content)
     {
@@ -527,16 +1017,26 @@
         {
             if (useSpecializedPipeline)
             {
-                // Use the new specialized agent pipeline
-                var (finalResponse, trace) = await OrchestratorService.ProcessQueryWithPipelineAsync(query);
+                // Use the new specialized agent pipeline with real-time streaming
+                var pipelineOutput = new System.Text.StringBuilder();
+                
+                var (finalResponse, trace) = await OrchestratorService.ProcessQueryWithPipelineAsync(
+                    query,
+                    onAgentComplete: (agentName, agentResponse) =>
+                    {
+                        // Add agent section header with visual separator (reduced whitespace)
+                        pipelineOutput.AppendLine($"---");
+                        pipelineOutput.AppendLine($"## 🤖 {agentName}");
+                        pipelineOutput.AppendLine(agentResponse);
+                        
+                        // Update UI immediately as each agent completes
+                        sopResponse = pipelineOutput.ToString();
+                        responseTimestamp = DateTime.Now;
+                        InvokeAsync(StateHasChanged);
+                    });
                 
                 responseTimestamp = DateTime.Now;
                 pipelineTrace = trace;
-                
-                // Display the response in the SOP Agent panel for now
-                const string PipelineModeMessage = "Pipeline mode: See observability metrics below";
-                sopResponse = finalResponse;
-                policyResponse = PipelineModeMessage;
                 
                 isProcessing = false;
                 StateHasChanged();

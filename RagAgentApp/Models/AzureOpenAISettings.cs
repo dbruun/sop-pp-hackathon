@@ -7,6 +7,7 @@ public class AzureAISettings
     public string ConnectionString { get; set; } = string.Empty;
     public string SopAgentId { get; set; } = string.Empty;
     public string PolicyAgentId { get; set; } = string.Empty;
+    public string? SearchAgentId { get; set; }
     
     // Optional: API Key for development/testing (Entra ID is preferred for production)
     public string? ApiKey { get; set; }

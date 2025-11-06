@@ -15,8 +15,7 @@ public class OrchestratorService
     private readonly IntakeAgent _intakeAgent;
     private readonly SearchAgent _searchAgent;
     private readonly WriterAgent _writerAgent;
-    private readonly ReviewerAgent _reviewerAgent;
-    private readonly ExecutorAgent _executorAgent;
+    private readonly ReviewerExecutorAgent _reviewerExecutorAgent;
     private readonly ILogger<OrchestratorService> _logger;
     private string? _orchestratorAgentId;
     private string? _deltaAnalysisAgentId;
@@ -30,8 +29,7 @@ public class OrchestratorService
         IntakeAgent intakeAgent,
         SearchAgent searchAgent,
         WriterAgent writerAgent,
-        ReviewerAgent reviewerAgent,
-        ExecutorAgent executorAgent,
+        ReviewerExecutorAgent reviewerExecutorAgent,
         ILogger<OrchestratorService> logger)
     {
         _agentsClient = agentsClient;
@@ -41,12 +39,11 @@ public class OrchestratorService
         _intakeAgent = intakeAgent;
         _searchAgent = searchAgent;
         _writerAgent = writerAgent;
-        _reviewerAgent = reviewerAgent;
-        _executorAgent = executorAgent;
+        _reviewerExecutorAgent = reviewerExecutorAgent;
         _logger = logger;
         
         _logger.LogInformation("OrchestratorService initialized with specialized agent pipeline: {Pipeline}", 
-            $"{intakeAgent.AgentName} -> {searchAgent.AgentName} -> {writerAgent.AgentName} -> {reviewerAgent.AgentName} -> {executorAgent.AgentName}");
+            $"{intakeAgent.AgentName} -> {searchAgent.AgentName} -> {writerAgent.AgentName} -> {reviewerExecutorAgent.AgentName}");
     }
 
     private string GetOrResolveOrchestratorAgentId()
@@ -435,7 +432,8 @@ Use clear markdown formatting with tables where appropriate to make the comparis
     /// Flow: Intake -> Search -> Writer -> Reviewer -> Executor
     /// </summary>
     public async Task<(string FinalResponse, PipelineExecutionTrace Trace)> ProcessQueryWithPipelineAsync(
-        string query, 
+        string query,
+        Action<string, string>? onAgentComplete = null,
         CancellationToken cancellationToken = default)
     {
         var trace = new PipelineExecutionTrace
@@ -462,6 +460,8 @@ Use clear markdown formatting with tables where appropriate to make the comparis
 
             _logger.LogInformation("Intake Agent completed. Intent analysis: {Result}", 
                 intakeResult.Length > 200 ? intakeResult.Substring(0, 200) + "..." : intakeResult);
+            
+            onAgentComplete?.Invoke("Intake Agent", intakeResult);
 
             // Step 2: Search Agent - Hybrid retrieval
             var searchTrace = await ExecuteAgentWithTraceAsync(
@@ -476,6 +476,8 @@ Use clear markdown formatting with tables where appropriate to make the comparis
                 "Search failed";
 
             _logger.LogInformation("Search Agent completed. Retrieved results: {ResultCount} characters", searchResults.Length);
+            
+            onAgentComplete?.Invoke("Search Agent", searchResults);
 
             // Step 3: Writer Agent - Draft with citations
             var writerTrace = await ExecuteAgentWithTraceAsync(
@@ -492,39 +494,26 @@ Use clear markdown formatting with tables where appropriate to make the comparis
                 "Draft failed";
 
             _logger.LogInformation("Writer Agent completed. Draft length: {Length} characters", draftResponse.Length);
-
-            // Step 4: Reviewer Agent - Validate grounding
-            var reviewerTrace = await ExecuteAgentWithTraceAsync(
-                _reviewerAgent, 
-                $"Review this response for grounding:\n\nQuery: {query}\n\nResponse: {draftResponse}\n\nSearch Results: {searchResults}", 
-                "Reviewer", 
-                cancellationToken);
-            trace.AgentTraces.Add(reviewerTrace);
             
-            var reviewResults = reviewerTrace.Success ? 
-                await _reviewerAgent.ProcessQueryAsync(
-                    $"Review this response for grounding:\n\nQuery: {query}\n\nResponse: {draftResponse}\n\nSearch Results: {searchResults}", 
-                    cancellationToken) : 
-                "Review failed";
+            onAgentComplete?.Invoke("Writer Agent", draftResponse);
 
-            _logger.LogInformation("Reviewer Agent completed. Review: {Review}", 
-                reviewResults.Length > 200 ? reviewResults.Substring(0, 200) + "..." : reviewResults);
-
-            // Step 5: Executor Agent - Format output
-            var executorTrace = await ExecuteAgentWithTraceAsync(
-                _executorAgent, 
-                $"Format this response for display:\n\n{draftResponse}\n\nReview Results: {reviewResults}", 
-                "Executor", 
+            // Step 4: ReviewerExecutor Agent - Validate grounding AND format output
+            var reviewerExecutorTrace = await ExecuteAgentWithTraceAsync(
+                _reviewerExecutorAgent, 
+                $"Review and format this response:\n\nQuery: {query}\n\nDraft Response: {draftResponse}\n\nSearch Results: {searchResults}\n\nValidate the response is grounded in the search results, then format it professionally for display.", 
+                "ReviewerExecutor", 
                 cancellationToken);
-            trace.AgentTraces.Add(executorTrace);
+            trace.AgentTraces.Add(reviewerExecutorTrace);
             
-            var finalResponse = executorTrace.Success ? 
-                await _executorAgent.ProcessQueryAsync(
-                    $"Format this response for display:\n\n{draftResponse}\n\nReview Results: {reviewResults}", 
+            var finalResponse = reviewerExecutorTrace.Success ? 
+                await _reviewerExecutorAgent.ProcessQueryAsync(
+                    $"Review and format this response:\n\nQuery: {query}\n\nDraft Response: {draftResponse}\n\nSearch Results: {searchResults}\n\nValidate the response is grounded in the search results, then format it professionally for display.", 
                     cancellationToken) : 
-                draftResponse; // Fallback to draft if executor fails
+                draftResponse; // Fallback to draft if reviewer/executor fails
 
-            _logger.LogInformation("Executor Agent completed. Final response length: {Length} characters", finalResponse.Length);
+            _logger.LogInformation("ReviewerExecutor Agent completed. Final response length: {Length} characters", finalResponse.Length);
+            
+            onAgentComplete?.Invoke("Reviewer & Executor Agent", finalResponse);
 
             trace.EndTime = DateTime.UtcNow;
             _logger.LogInformation("Pipeline completed in {Duration}ms with total cost ${Cost}", 

@@ -23,7 +23,14 @@ azureAISettings.ModelDeploymentName = builder.Configuration["AZURE_AI_MODEL_DEPL
 azureAISettings.ConnectionString = builder.Configuration["AZURE_AI_CONNECTION_STRING"] ?? azureAISettings.ConnectionString;
 azureAISettings.SopAgentId = builder.Configuration["AZURE_AI_SOP_AGENT_ID"] ?? azureAISettings.SopAgentId;
 azureAISettings.PolicyAgentId = builder.Configuration["AZURE_AI_POLICY_AGENT_ID"] ?? azureAISettings.PolicyAgentId;
+azureAISettings.SearchAgentId = builder.Configuration["AZURE_AI_SEARCH_AGENT_ID"] ?? azureAISettings.SearchAgentId;
 azureAISettings.ApiKey = builder.Configuration["AZURE_AI_API_KEY"] ?? azureAISettings.ApiKey;
+
+// Log the configuration being used
+Console.WriteLine($"===== AZURE AI CONFIGURATION =====");
+Console.WriteLine($"Model Deployment Name: {azureAISettings.ModelDeploymentName}");
+Console.WriteLine($"Project Endpoint: {azureAISettings.ProjectEndpoint}");
+Console.WriteLine($"==================================");
 
 // Register PersistentAgentsClient (v1.1.0 API with Azure.AI.Agents.Persistent)
 builder.Services.AddSingleton<PersistentAgentsClient>(sp =>
@@ -73,7 +80,11 @@ builder.Services.AddSingleton<SearchAgent>(sp =>
     var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
     var settings = sp.GetRequiredService<AzureAISettings>();
     var logger = sp.GetRequiredService<ILogger<SearchAgent>>();
-    return new SearchAgent(agentsClient, settings.ModelDeploymentName, logger);
+    return new SearchAgent(
+        agentsClient, 
+        settings.ModelDeploymentName, 
+        logger,
+        settings.SearchAgentId);
 });
 
 builder.Services.AddSingleton<WriterAgent>(sp =>
@@ -84,20 +95,12 @@ builder.Services.AddSingleton<WriterAgent>(sp =>
     return new WriterAgent(agentsClient, settings.ModelDeploymentName, logger);
 });
 
-builder.Services.AddSingleton<ReviewerAgent>(sp =>
+builder.Services.AddSingleton<ReviewerExecutorAgent>(sp =>
 {
     var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
     var settings = sp.GetRequiredService<AzureAISettings>();
-    var logger = sp.GetRequiredService<ILogger<ReviewerAgent>>();
-    return new ReviewerAgent(agentsClient, settings.ModelDeploymentName, logger);
-});
-
-builder.Services.AddSingleton<ExecutorAgent>(sp =>
-{
-    var agentsClient = sp.GetRequiredService<PersistentAgentsClient>();
-    var settings = sp.GetRequiredService<AzureAISettings>();
-    var logger = sp.GetRequiredService<ILogger<ExecutorAgent>>();
-    return new ExecutorAgent(agentsClient, settings.ModelDeploymentName, logger);
+    var logger = sp.GetRequiredService<ILogger<ReviewerExecutorAgent>>();
+    return new ReviewerExecutorAgent(agentsClient, settings.ModelDeploymentName, logger);
 });
 
 // Register orchestrator service as singleton (it's now an agent itself with function calling)
@@ -110,8 +113,7 @@ builder.Services.AddSingleton<OrchestratorService>(sp =>
     var intakeAgent = sp.GetRequiredService<IntakeAgent>();
     var searchAgent = sp.GetRequiredService<SearchAgent>();
     var writerAgent = sp.GetRequiredService<WriterAgent>();
-    var reviewerAgent = sp.GetRequiredService<ReviewerAgent>();
-    var executorAgent = sp.GetRequiredService<ExecutorAgent>();
+    var reviewerExecutorAgent = sp.GetRequiredService<ReviewerExecutorAgent>();
     var logger = sp.GetRequiredService<ILogger<OrchestratorService>>();
     return new OrchestratorService(
         agentsClient, 
@@ -121,8 +123,7 @@ builder.Services.AddSingleton<OrchestratorService>(sp =>
         intakeAgent, 
         searchAgent, 
         writerAgent, 
-        reviewerAgent, 
-        executorAgent, 
+        reviewerExecutorAgent, 
         logger);
 });
 
